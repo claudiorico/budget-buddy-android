@@ -2,7 +2,7 @@ import { useState, useRef, useMemo, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, TextInput, Modal,
   Animated, Alert, ScrollView, KeyboardAvoidingView,
-  Platform, Pressable, ActivityIndicator,
+  Platform, Pressable, ActivityIndicator, Dimensions,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -108,6 +108,9 @@ export default function ExpensesScreen() {
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // Auto-focus description field on open
+  const descriptionRef = useRef<TextInput>(null);
+
   const openSheet = useCallback((mode: SheetMode, target?: Expense) => {
     setSheetMode(mode);
     if (mode === 'add') {
@@ -124,7 +127,12 @@ export default function ExpensesScreen() {
     setSheetVisible(true);
     Animated.spring(slideAnim, {
       toValue: 0, useNativeDriver: true, tension: 65, friction: 11,
-    }).start();
+    }).start(() => {
+      if (mode === 'add') {
+        // Focus after animation finishes so the keyboard slides in cleanly
+        setTimeout(() => descriptionRef.current?.focus(), 80);
+      }
+    });
   }, [slideAnim]);
 
   const closeSheet = useCallback(() => {
@@ -326,60 +334,66 @@ export default function ExpensesScreen() {
         animationType="none"
         onRequestClose={closeSheet}
       >
+        {/*
+          Estrutura correta para Android + iOS:
+          KAV fica FORA do backdrop (abaixo dele) e envolve apenas o sheet.
+          No Android behavior="height" reduz a altura do KAV quando o teclado
+          sobe, fazendo o ScrollView interno ficar "scrollável".
+          No iOS behavior="padding" empurra o sheet para cima.
+        */}
         <View style={{ flex: 1 }}>
           <Pressable
             style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.45)' }}
             onPress={closeSheet}
           />
-          <Animated.View
-            style={{
-              transform: [{ translateY: slideAnim }],
-              backgroundColor: 'white',
-              borderTopLeftRadius: 24,
-              borderTopRightRadius: 24,
-            }}
+
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           >
-            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+            <Animated.View
+              style={{
+                transform: [{ translateY: slideAnim }],
+                backgroundColor: 'white',
+                borderTopLeftRadius: 24,
+                borderTopRightRadius: 24,
+                maxHeight: Dimensions.get('window').height * 0.88,
+              }}
+            >
               {/* Handle */}
               <View className="items-center pt-3 pb-1">
                 <View className="w-10 h-1 bg-gray-200 rounded-full" />
               </View>
 
-              <View
-                className="px-5"
-                style={{ paddingBottom: Math.max(insets.bottom + 8, 24) }}
-              >
-                {/* Title row */}
-                <View className="flex-row items-center justify-between mb-4">
-                  <Text className="text-base font-semibold text-gray-900">
-                    {sheetMode === 'add' ? 'Novo gasto' : 'Editar categoria'}
-                  </Text>
-                  <TouchableOpacity onPress={closeSheet}>
-                    <Ionicons name="close-circle" size={24} color="#9CA3AF" />
-                  </TouchableOpacity>
-                </View>
+              {/* Title row */}
+              <View className="flex-row items-center justify-between px-5 mb-2">
+                <Text className="text-base font-semibold text-gray-900">
+                  {sheetMode === 'add' ? 'Novo gasto' : 'Editar categoria'}
+                </Text>
+                <TouchableOpacity onPress={closeSheet}>
+                  <Ionicons name="close-circle" size={24} color="#9CA3AF" />
+                </TouchableOpacity>
+              </View>
 
+              {/* Conteúdo rolável — garante que tudo fique visível com teclado aberto */}
+              <ScrollView
+                bounces={false}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{
+                  paddingHorizontal: 20,
+                  paddingBottom: Math.max(insets.bottom + 16, 28),
+                  gap: 0,
+                }}
+              >
                 {/* ── Add mode fields ─────────────────────────────────────── */}
                 {sheetMode === 'add' && (
                   <>
-                    {/* Date */}
-                    <Text className="text-xs font-medium text-gray-500 mb-1.5">
-                      Data (AAAA-MM-DD)
+                    {/* Descrição primeiro — campo com auto-focus */}
+                    <Text className="text-xs font-medium text-gray-500 mb-1.5 mt-2">
+                      Descrição
                     </Text>
                     <TextInput
-                      className="bg-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 mb-3"
-                      value={date}
-                      onChangeText={setDate}
-                      placeholder="2025-01-15"
-                      placeholderTextColor="#9CA3AF"
-                      maxLength={10}
-                      keyboardType="numbers-and-punctuation"
-                      autoCorrect={false}
-                    />
-
-                    {/* Description */}
-                    <Text className="text-xs font-medium text-gray-500 mb-1.5">Descrição</Text>
-                    <TextInput
+                      ref={descriptionRef}
                       className="bg-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 mb-3"
                       value={description}
                       onChangeText={setDescription}
@@ -387,9 +401,10 @@ export default function ExpensesScreen() {
                       placeholderTextColor="#9CA3AF"
                       returnKeyType="next"
                       autoCapitalize="sentences"
+                      blurOnSubmit={false}
                     />
 
-                    {/* Values row */}
+                    {/* Valores */}
                     <View className="flex-row gap-3 mb-3">
                       <View className="flex-1">
                         <Text className="text-xs font-medium text-gray-500 mb-1.5">Valor BRL</Text>
@@ -416,12 +431,27 @@ export default function ExpensesScreen() {
                         />
                       </View>
                     </View>
+
+                    {/* Data */}
+                    <Text className="text-xs font-medium text-gray-500 mb-1.5">
+                      Data (AAAA-MM-DD)
+                    </Text>
+                    <TextInput
+                      className="bg-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 mb-3"
+                      value={date}
+                      onChangeText={setDate}
+                      placeholder="2025-01-15"
+                      placeholderTextColor="#9CA3AF"
+                      maxLength={10}
+                      keyboardType="numbers-and-punctuation"
+                      autoCorrect={false}
+                    />
                   </>
                 )}
 
                 {/* ── Edit mode hint ──────────────────────────────────────── */}
                 {sheetMode === 'edit' && editTarget && (
-                  <View className="bg-gray-50 rounded-xl px-4 py-3 mb-4">
+                  <View className="bg-gray-50 rounded-xl px-4 py-3 mb-4 mt-2">
                     <Text className="text-sm font-medium text-gray-700" numberOfLines={1}>
                       {editTarget.description ?? '—'}
                     </Text>
@@ -437,7 +467,8 @@ export default function ExpensesScreen() {
                   horizontal
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={{ gap: 8, paddingBottom: 4 }}
-                  className="mb-4"
+                  className="mb-5"
+                  keyboardShouldPersistTaps="handled"
                 >
                   <TouchableOpacity
                     onPress={() => setCategoryId(null)}
@@ -491,9 +522,9 @@ export default function ExpensesScreen() {
                     : <Text className="text-white font-semibold text-sm">Salvar</Text>
                   }
                 </TouchableOpacity>
-              </View>
-            </KeyboardAvoidingView>
-          </Animated.View>
+              </ScrollView>
+            </Animated.View>
+          </KeyboardAvoidingView>
         </View>
       </Modal>
     </View>

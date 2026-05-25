@@ -65,6 +65,19 @@ function formatYear() {
   return new Date().getFullYear().toString();
 }
 
+// Categorias padrão carregadas na primeira vez que o usuário abre o vault.
+// IDs fixos (não UUIDs) evitam duplicatas caso o seed seja chamado duas vezes.
+const DEFAULT_CATEGORIES: Category[] = [
+  { category_id: 'cat-alimentacao', name: 'Alimentação',  color: '#F97316', icon: '🍽️' },
+  { category_id: 'cat-transporte',  name: 'Transporte',   color: '#3B82F6', icon: '🚗' },
+  { category_id: 'cat-saude',       name: 'Saúde',        color: '#22C55E', icon: '💊' },
+  { category_id: 'cat-lazer',       name: 'Lazer',        color: '#A855F7', icon: '🎬' },
+  { category_id: 'cat-moradia',     name: 'Moradia',      color: '#EF4444', icon: '🏠' },
+  { category_id: 'cat-vestuario',   name: 'Vestuário',    color: '#EC4899', icon: '👕' },
+  { category_id: 'cat-educacao',    name: 'Educação',     color: '#F59E0B', icon: '📚' },
+  { category_id: 'cat-outros',      name: 'Outros',       color: '#6B7280', icon: '📦' },
+];
+
 // ── Context ───────────────────────────────────────────────────────────────────
 
 const DataContext = createContext<DataContextType | null>(null);
@@ -108,7 +121,18 @@ export function DataProvider({ children }: { children: ReactNode }) {
         drive.readFile<Goal[]>(token, 'goals.json'),
       ]);
 
-      setCategories(cats ?? []);
+      // Primeira vez: categories.json não existe → seed das categorias padrão
+      let resolvedCats = cats;
+      if (!resolvedCats) {
+        try {
+          await drive.writeFile(token, 'categories.json', DEFAULT_CATEGORIES);
+          resolvedCats = DEFAULT_CATEGORIES;
+        } catch {
+          resolvedCats = DEFAULT_CATEGORIES; // usa em memória mesmo se o write falhar
+        }
+      }
+
+      setCategories(resolvedCats);
       setGoals(gls ?? []);
 
       if (rawExpenses && rawExpenses.length > 0) {

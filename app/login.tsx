@@ -1,8 +1,15 @@
-import { View, Text, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
+import { useEffect } from 'react';
+import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function LoginScreen() {
-  const { signIn, loading } = useAuth();
+  const { signIn, loading, user } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (user) router.replace('/');
+  }, [user]);
 
   return (
     <View className="flex-1 bg-white justify-between px-8 py-16">
@@ -12,7 +19,7 @@ export default function LoginScreen() {
           <Text className="text-white text-4xl">💰</Text>
         </View>
         <Text className="text-3xl font-bold text-gray-900 tracking-tight">
-          Budget Buddy
+          Gestão Financeira
         </Text>
         <Text className="text-base text-gray-500 mt-2 text-center leading-relaxed">
           Seus gastos, sua privacidade.{'\n'}Dados criptografados no seu Google Drive.
