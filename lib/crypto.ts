@@ -15,7 +15,11 @@ export function bufferToBase64(buffer: ArrayBuffer): string {
 }
 
 export function base64ToBuffer(b64: string): ArrayBuffer {
-  return Buffer.from(b64, 'base64').buffer as ArrayBuffer;
+  const buf = Buffer.from(b64, 'base64');
+  // Node.js Buffer usa um pool de memória compartilhado: buf.buffer pode ser
+  // maior que os bytes que queremos. Usar slice garante que apenas os bytes
+  // corretos são expostos (funciona igualmente com o polyfill npm:buffer do RN).
+  return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer;
 }
 
 // Explicit Uint8Array<ArrayBuffer> avoids TypeScript 6 strict-mode errors with crypto.subtle
