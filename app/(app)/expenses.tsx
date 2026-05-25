@@ -1,8 +1,8 @@
-import { useState, useRef, useMemo, useCallback } from 'react';
+import { useState, useRef, useMemo, useCallback, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity, TextInput, Modal,
-  Animated, Alert, ScrollView, KeyboardAvoidingView,
-  Platform, Pressable, ActivityIndicator, Dimensions,
+  Animated, Alert, ScrollView, Keyboard,
+  Platform, Pressable, ActivityIndicator,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -98,7 +98,41 @@ export default function ExpensesScreen() {
   const [sheetVisible, setSheetVisible] = useState(false);
   const [sheetMode, setSheetMode] = useState<SheetMode>('add');
   const [editTarget, setEditTarget] = useState<Expense | null>(null);
-  const slideAnim = useRef(new Animated.Value(500)).current;
+
+  // slideAnim: sheet slide-in (500 = off screen, 0 = visible)
+  const slideAnim    = useRef(new Animated.Value(500)).current;
+  // kbOffset: keyboard height in px (0 when hidden, >0 when shown)
+  const kbOffset     = useRef(new Animated.Value(0)).current;
+  // Combined transform: move sheet up by keyboard height when keyboard opens
+  const sheetTranslateY = useRef(Animated.subtract(slideAnim, kbOffset)).current;
+
+  // Listen to keyboard events ONLY while the sheet is visible
+  useEffect(() => {
+    if (!sheetVisible) {
+      kbOffset.setValue(0);
+      return;
+    }
+    // iOS: keyboardWill* for smooth animation matching system keyboard.
+    // Android: keyboardDid* (Will* is not fired on Android).
+    const showEvt = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvt = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const onShow = Keyboard.addListener(showEvt, (e) => {
+      Animated.timing(kbOffset, {
+        toValue: e.endCoordinates.height,
+        duration: Platform.OS === 'ios' ? (e.duration ?? 250) : 180,
+        useNativeDriver: true,
+      }).start();
+    });
+    const onHide = Keyboard.addListener(hideEvt, () => {
+      Animated.timing(kbOffset, {
+        toValue: 0,
+        duration: 180,
+        useNativeDriver: true,
+      }).start();
+    });
+    return () => { onShow.remove(); onHide.remove(); };
+  }, [sheetVisible, kbOffset]);
 
   // Add form fields
   const [date, setDate] = useState(todayIso);
@@ -112,6 +146,7 @@ export default function ExpensesScreen() {
   const descriptionRef = useRef<TextInput>(null);
 
   const openSheet = useCallback((mode: SheetMode, target?: Expense) => {
+    kbOffset.setValue(0); // reset any leftover keyboard offset
     setSheetMode(mode);
     if (mode === 'add') {
       setDate(todayIso());
@@ -133,13 +168,15 @@ export default function ExpensesScreen() {
         setTimeout(() => descriptionRef.current?.focus(), 80);
       }
     });
-  }, [slideAnim]);
+  }, [slideAnim, kbOffset]);
 
   const closeSheet = useCallback(() => {
+    Keyboard.dismiss(); // dismiss keyboard before animating sheet out
+    kbOffset.setValue(0);
     Animated.timing(slideAnim, {
       toValue: 500, duration: 220, useNativeDriver: true,
     }).start(() => setSheetVisible(false));
-  }, [slideAnim]);
+  }, [slideAnim, kbOffset]);
 
   const handleSave = useCallback(async () => {
     if (sheetMode === 'add') {
@@ -335,11 +372,11 @@ export default function ExpensesScreen() {
         onRequestClose={closeSheet}
       >
         {/*
-          Estrutura correta para Android + iOS:
-          KAV fica FORA do backdrop (abaixo dele) e envolve apenas o sheet.
-          No Android behavior="height" reduz a altura do KAV quando o teclado
-          sobe, fazendo o ScrollView interno ficar "scrollável".
-          No iOS behavior="padding" empurra o sheet para cima.
+          Abordagem correta para Android + iOS com Modal:
+          - KeyboardAvoidingView NÃO funciona dentro de Modal no Android.
+          - Em vez disso, escutamos keyboardDid{Show,Hide} e animamos o sheet
+            para cima pela altura exata do teclado via kbOffset.
+          - O ScrollView interno garante que todos os campos ficam acessíveis.
         */}
         <View style={{ flex: 1 }}>
           <Pressable
@@ -347,18 +384,14 @@ export default function ExpensesScreen() {
             onPress={closeSheet}
           />
 
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          <Animated.View
+            style={{
+              transform: [{ translateY: sheetTranslateY }],
+              backgroundColor: 'white',
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+            }}
           >
-            <Animated.View
-              style={{
-                transform: [{ translateY: slideAnim }],
-                backgroundColor: 'white',
-                borderTopLeftRadius: 24,
-                borderTopRightRadius: 24,
-                maxHeight: Dimensions.get('window').height * 0.88,
-              }}
-            >
               {/* Handle */}
               <View className="items-center pt-3 pb-1">
                 <View className="w-10 h-1 bg-gray-200 rounded-full" />
@@ -523,8 +556,7 @@ export default function ExpensesScreen() {
                   }
                 </TouchableOpacity>
               </ScrollView>
-            </Animated.View>
-          </KeyboardAvoidingView>
+          </Animated.View>
         </View>
       </Modal>
     </View>
