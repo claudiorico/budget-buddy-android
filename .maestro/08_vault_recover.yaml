@@ -1,0 +1,75 @@
+appId: com.budgetbuddy.app
+name: "08 - Recuperar cofre com 12 palavras"
+---
+# Simula "esqueci a senha" → recovery via 12 palavras BIP-39 → nova senha.
+#
+# PRÉ-REQUISITOS (env vars):
+#   - MNEMONIC: as 12 palavras de recuperação do seu cofre, separadas por espaço
+#   - NEW_VAULT_PASSWORD: a senha que será gravada após o recovery
+#
+# ATENÇÃO: este teste TROCA a senha do cofre pela NEW_VAULT_PASSWORD. Se quiser
+# manter a senha atual, passe NEW_VAULT_PASSWORD igual à senha atual.
+#
+# Como rodar:
+#   maestro test .maestro/08_vault_recover.yaml `
+#     -e MNEMONIC="palavra1 palavra2 ... palavra12" `
+#     -e NEW_VAULT_PASSWORD="Me@187203"
+
+# Não usa stopApp:true para preservar conexão com o Metro.
+# Garanta que o app já está conectado ao bundler antes de rodar.
+- launchApp:
+    stopApp: false
+
+- waitForAnimationToEnd
+
+# Se o cofre já estiver desbloqueado, bloqueia primeiro
+- runFlow:
+    when:
+      visible: "Início"
+    commands:
+      - tapOn: "Perfil"
+      - extendedWaitUntil:
+          visible: "Bloquear cofre"
+          timeout: 5000
+      - tapOn: "Bloquear cofre"
+      - extendedWaitUntil:
+          visible: "Desbloquear Cofre"
+          timeout: 5000
+
+- assertVisible: "Desbloquear Cofre"
+
+# Toca no link de recuperação
+- tapOn: "Esqueceu a senha"
+
+- extendedWaitUntil:
+    visible: "Recuperar Cofre"
+    timeout: 5000
+
+- assertVisible: "12 palavras de recuperação"
+- assertVisible: "Nova senha do cofre"
+- assertVisible: "Confirmar nova senha"
+
+# Digita as 12 palavras (inputText do Maestro só ASCII — palavras BIP-39 são todas ASCII)
+- inputText: "${MNEMONIC}"
+
+# Tab pra próximo campo: clica no campo de nova senha (label visível em cima do input)
+- tapOn: "Nova senha do cofre"
+- inputText: "${NEW_VAULT_PASSWORD}"
+
+- tapOn: "Confirmar nova senha"
+- inputText: "${NEW_VAULT_PASSWORD}"
+
+- tapOn: "Recuperar cofre"
+
+# Aguarda até 15s pela navegação pro Dashboard
+- extendedWaitUntil:
+    visible:
+      text: "Início|Olá,|Dashboard"
+    timeout: 15000
+
+# Confirma que entrou no app principal
+- assertVisible: "Início"
+
+- assertNotVisible: "Couldn't find a navigation context"
+- assertNotVisible: "Something went wrong"
+- assertNotVisible: "Palavras de recuperação inválidas"

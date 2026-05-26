@@ -93,7 +93,7 @@ export function useBiometricVault() {
         keychainService: 'budget-buddy-vault',
       });
     } catch { /* ignore */ }
-    storage.delete(MMKV_FLAG);
+    storage.remove(MMKV_FLAG);
     setEnabledState(false);
   }, []);
 

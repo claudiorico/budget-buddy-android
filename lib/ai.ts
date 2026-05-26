@@ -70,7 +70,7 @@ export function setStoredApiKey(key: string): void {
 }
 
 export function clearStoredApiKey(): void {
-  storage.delete(KEY_STORAGE_KEY);
+  storage.remove(KEY_STORAGE_KEY);
 }
 
 function todayIso(): string {
