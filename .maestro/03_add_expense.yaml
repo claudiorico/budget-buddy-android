@@ -1,0 +1,46 @@
+appId: com.budgetbuddy.app
+name: "03 - Adicionar gasto"
+---
+# PRE-REQUISITO: cofre ja desbloqueado.
+# inputText nao suporta acentos (limitacao do ADB) — usar texto ASCII puro.
+# tapOn e assertVisible funcionam com acentos (leem a tela, nao digitam).
+
+- launchApp:
+    stopApp: false
+
+- waitForAnimationToEnd
+
+- tapOn: "Gastos"
+
+# ── Abre o formulario de novo gasto ──────────────────────────────────────────
+
+- tapOn:
+    id: "fab-add-expense"
+
+- assertVisible: "Novo gasto"
+- assertVisible: "Valor BRL"
+
+# ── Preenche a descricao (campo com auto-focus) ───────────────────────────────
+
+- inputText: "Almoco Maestro Test"
+
+# ── Preenche o valor BRL (via testID) ────────────────────────────────────────
+
+- tapOn:
+    id: "input-value-brl"
+
+- inputText: "42.50"
+
+# ── Seleciona uma categoria ───────────────────────────────────────────────────
+
+- tapOn: "Alimentação"
+
+# ── Salva o gasto ─────────────────────────────────────────────────────────────
+
+- tapOn: "Salvar"
+
+# Aguarda o sheet fechar e a lista recarregar (ate 8 segundos)
+- extendedWaitUntil:
+    visible:
+      text: "Almoco Maestro Test"
+    timeout: 8000

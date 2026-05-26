@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { Platform } from 'react-native';
 import {
   GoogleSignin,
   statusCodes,
@@ -7,7 +8,7 @@ import {
 GoogleSignin.configure({
   // Web Client ID (type "Web application") do Google Cloud Console
   // OAuth 2.0 > Credenciais > Criar ID do cliente OAuth > Aplicativo da Web
-  webClientId: '454791697705-ufkptbcn76soa5pob8vt8j8m2sn00bna.apps.googleusercontent.com',
+  webClientId: '849799119137-3susk1bcec9d5iukk8h2fpd5due5i8ne.apps.googleusercontent.com',
   scopes: [
     'https://www.googleapis.com/auth/drive.appdata',
   ],
@@ -40,6 +41,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // ── Restore previous session on app start ───────────────────────────────
 
   useEffect(() => {
+    if (Platform.OS === 'web') {
+      setRestoring(false);
+      return;
+    }
     (async () => {
       try {
         await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: false });

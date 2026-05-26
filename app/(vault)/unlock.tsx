@@ -192,6 +192,7 @@ export default function VaultUnlockScreen() {
             <Text className="text-sm font-medium text-gray-700">Senha do cofre</Text>
             <View className="flex-row items-center border border-gray-300 rounded-xl px-4 bg-gray-50">
               <TextInput
+                testID="vault-password-input"
                 className="flex-1 py-3.5 text-base text-gray-900"
                 placeholder="Sua senha do cofre"
                 placeholderTextColor="#9CA3AF"

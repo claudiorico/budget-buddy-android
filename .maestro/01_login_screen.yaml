@@ -1,0 +1,32 @@
+appId: com.budgetbuddy.app
+name: "01 - Tela de login"
+---
+# ATENÇÃO: não usar clearState com expo-dev-client.
+# O clearState apaga a URL do Metro bundler salva pelo Expo,
+# causando a abertura do Dev Launcher em vez do app real.
+# Para testar com dev build: deixe o Metro rodando (npx expo start)
+# e o app já conectado antes de rodar o Maestro.
+
+# Traz o app para frente SEM matar o processo (preserva conexão com Metro)
+- launchApp:
+    stopApp: false
+
+# Aguarda o React Native terminar de renderizar
+- waitForAnimationToEnd
+
+# ── Verifica elementos da tela de login ──────────────────────────────────────
+
+- assertVisible: "Gestão Financeira"
+
+- assertVisible: "Seus gastos, sua privacidade."
+
+- assertVisible: "Criptografia AES-256 no seu dispositivo"
+
+- assertVisible: "Sincronizado no seu Google Drive"
+
+- assertVisible: "Zero acesso do desenvolvedor"
+
+- assertVisible: "Entrar com Google"
+
+- assertVisible:
+    text: "Apenas as permissões de perfil e Google Drive (appdata) são solicitadas."

@@ -10,14 +10,18 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { useVault } from '@/contexts/VaultContext';
+import { useGeminiKey } from '@/hooks/useGeminiKey';
+import { parseExpenseFromText } from '@/lib/ai';
 
 // ── Ko-fi ─────────────────────────────────────────────────────────────────────
 
 const KOFI_URL = 'https://ko-fi.com/budgetbuddyapp';
+const GEMINI_KEY_URL = 'https://aistudio.google.com/apikey';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type KeyRegenStep = 'password' | 'mnemonic';
+type AiTestState = 'idle' | 'testing' | 'ok' | 'error';
 
 // ── Main screen ───────────────────────────────────────────────────────────────
 
@@ -25,6 +29,15 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { user, signOut } = useAuth();
   const { lockVault, regenerateRecoveryKey } = useVault();
+  const { apiKey, hasKey, setApiKey, clearKey } = useGeminiKey();
+
+  // ── AI key modal ───────────────────────────────────────────────────────────
+  const [aiModalVisible, setAiModalVisible] = useState(false);
+  const [aiKeyInput, setAiKeyInput] = useState('');
+  const [aiKeyVisible, setAiKeyVisible] = useState(false);
+  const [aiTestState, setAiTestState] = useState<AiTestState>('idle');
+  const [aiTestMessage, setAiTestMessage] = useState('');
+  const aiSlideAnim = useRef(new Animated.Value(500)).current;
 
   // ── Key regen modal ────────────────────────────────────────────────────────
   const [modalVisible, setModalVisible] = useState(false);
@@ -111,6 +124,71 @@ export default function ProfileScreen() {
     Linking.openURL(KOFI_URL);
   }, []);
 
+  // ── AI key modal ───────────────────────────────────────────────────────────
+  const openAiModal = useCallback(() => {
+    setAiKeyInput(apiKey ?? '');
+    setAiKeyVisible(false);
+    setAiTestState('idle');
+    setAiTestMessage('');
+    setAiModalVisible(true);
+    Animated.spring(aiSlideAnim, {
+      toValue: 0, useNativeDriver: true, tension: 65, friction: 11,
+    }).start();
+  }, [apiKey, aiSlideAnim]);
+
+  const closeAiModal = useCallback(() => {
+    Animated.timing(aiSlideAnim, {
+      toValue: 500, duration: 220, useNativeDriver: true,
+    }).start(() => setAiModalVisible(false));
+  }, [aiSlideAnim]);
+
+  const handleAiSave = useCallback(() => {
+    setApiKey(aiKeyInput);
+    closeAiModal();
+  }, [aiKeyInput, setApiKey, closeAiModal]);
+
+  const handleAiClear = useCallback(() => {
+    Alert.alert(
+      'Remover chave?',
+      'Você não poderá usar texto/voz até configurar uma nova chave.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Remover', style: 'destructive', onPress: () => {
+          clearKey();
+          closeAiModal();
+        }},
+      ],
+    );
+  }, [clearKey, closeAiModal]);
+
+  const handleAiTest = useCallback(async () => {
+    if (!aiKeyInput.trim()) {
+      setAiTestState('error');
+      setAiTestMessage('Cole a chave primeiro.');
+      return;
+    }
+    setApiKey(aiKeyInput);
+    setAiTestState('testing');
+    setAiTestMessage('');
+    try {
+      const draft = await parseExpenseFromText('teste 10 reais hoje', []);
+      if (draft.value_brl > 0) {
+        setAiTestState('ok');
+        setAiTestMessage(`OK! Extraiu valor R$ ${draft.value_brl.toFixed(2)}`);
+      } else {
+        setAiTestState('error');
+        setAiTestMessage('Chave aceita mas resposta inesperada.');
+      }
+    } catch (e) {
+      setAiTestState('error');
+      setAiTestMessage((e as Error).message || 'Falha ao chamar Gemini.');
+    }
+  }, [aiKeyInput, setApiKey]);
+
+  const handleOpenKeyDocs = useCallback(() => {
+    Linking.openURL(GEMINI_KEY_URL);
+  }, []);
+
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <View className="flex-1 bg-gray-50" style={{ paddingTop: insets.top }}>
@@ -193,6 +271,22 @@ export default function ProfileScreen() {
           />
         </View>
 
+        {/* ── AI section ─────────────────────────────────────────────────── */}
+        <View className="mx-4 mb-4 bg-white rounded-2xl shadow-sm overflow-hidden">
+          <View className="px-4 pt-4 pb-2">
+            <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+              IA
+            </Text>
+          </View>
+          <ActionRow
+            icon="sparkles-outline"
+            iconColor="#7C3AED"
+            label="Configurar API Gemini"
+            subtitle={hasKey ? 'Configurada — toque para alterar' : 'Não configurada'}
+            onPress={openAiModal}
+          />
+        </View>
+
         {/* ── About section ──────────────────────────────────────────────── */}
         <View className="mx-4 mb-4 bg-white rounded-2xl p-4 shadow-sm">
           <View className="px-0 pb-2">
@@ -235,6 +329,136 @@ export default function ProfileScreen() {
           Nenhum servidor. Zero custódia.
         </Text>
       </ScrollView>
+
+      {/* ── AI Key Modal ────────────────────────────────────────────────────── */}
+      <Modal
+        visible={aiModalVisible}
+        transparent
+        animationType="none"
+        onRequestClose={closeAiModal}
+      >
+        <View style={{ flex: 1 }}>
+          <Pressable
+            style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.45)' }}
+            onPress={closeAiModal}
+          />
+          <Animated.View
+            style={{
+              transform: [{ translateY: aiSlideAnim }],
+              backgroundColor: 'white',
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+            }}
+          >
+            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+              <View className="items-center pt-3 pb-1">
+                <View className="w-10 h-1 bg-gray-200 rounded-full" />
+              </View>
+              <View
+                className="px-5"
+                style={{ paddingBottom: Math.max(insets.bottom + 8, 24) }}
+              >
+                <View className="flex-row items-center justify-between mb-1">
+                  <Text className="text-base font-semibold text-gray-900">
+                    Configurar API Gemini
+                  </Text>
+                  <TouchableOpacity onPress={closeAiModal}>
+                    <Ionicons name="close-circle" size={24} color="#9CA3AF" />
+                  </TouchableOpacity>
+                </View>
+                <Text className="text-xs text-gray-500 mb-3">
+                  Sua chave fica apenas neste device. Free tier do Google cobre uso pessoal.
+                </Text>
+
+                <TouchableOpacity
+                  onPress={handleOpenKeyDocs}
+                  className="flex-row items-center gap-1.5 mb-3"
+                >
+                  <Ionicons name="open-outline" size={14} color="#2563EB" />
+                  <Text className="text-xs text-blue-600 font-medium">
+                    Obter chave grátis no Google AI Studio
+                  </Text>
+                </TouchableOpacity>
+
+                <Text className="text-xs font-medium text-gray-500 mb-1.5">
+                  API key
+                </Text>
+                <View className="bg-gray-100 rounded-xl flex-row items-center px-4 mb-3">
+                  <TextInput
+                    className="flex-1 py-3 text-sm text-gray-800"
+                    value={aiKeyInput}
+                    onChangeText={text => {
+                      setAiKeyInput(text);
+                      setAiTestState('idle');
+                    }}
+                    secureTextEntry={!aiKeyVisible}
+                    placeholder="AIza..."
+                    placeholderTextColor="#9CA3AF"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                  <TouchableOpacity onPress={() => setAiKeyVisible(v => !v)}>
+                    <Ionicons
+                      name={aiKeyVisible ? 'eye-off-outline' : 'eye-outline'}
+                      size={18}
+                      color="#9CA3AF"
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                {aiTestState !== 'idle' && (
+                  <View className={`rounded-xl px-3 py-2.5 mb-3 flex-row items-center gap-2 ${
+                    aiTestState === 'ok' ? 'bg-green-50 border border-green-200'
+                      : aiTestState === 'error' ? 'bg-red-50 border border-red-200'
+                      : 'bg-gray-50 border border-gray-200'
+                  }`}>
+                    {aiTestState === 'testing' && <ActivityIndicator size="small" color="#6B7280" />}
+                    {aiTestState === 'ok' && <Ionicons name="checkmark-circle" size={16} color="#10B981" />}
+                    {aiTestState === 'error' && <Ionicons name="close-circle" size={16} color="#EF4444" />}
+                    <Text className={`text-xs flex-1 ${
+                      aiTestState === 'ok' ? 'text-green-700'
+                        : aiTestState === 'error' ? 'text-red-700'
+                        : 'text-gray-600'
+                    }`}>
+                      {aiTestState === 'testing' ? 'Testando…' : aiTestMessage}
+                    </Text>
+                  </View>
+                )}
+
+                <View className="flex-row gap-2 mb-2">
+                  <TouchableOpacity
+                    onPress={handleAiTest}
+                    disabled={aiTestState === 'testing'}
+                    className="flex-1 bg-gray-100 rounded-xl py-3 items-center"
+                    activeOpacity={0.85}
+                  >
+                    <Text className="text-gray-700 font-semibold text-sm">Testar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={handleAiSave}
+                    disabled={!aiKeyInput.trim()}
+                    className={`flex-1 rounded-xl py-3 items-center ${
+                      aiKeyInput.trim() ? 'bg-blue-600' : 'bg-blue-300'
+                    }`}
+                    activeOpacity={0.85}
+                  >
+                    <Text className="text-white font-semibold text-sm">Salvar</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {hasKey && (
+                  <TouchableOpacity
+                    onPress={handleAiClear}
+                    className="py-2 items-center"
+                  >
+                    <Text className="text-xs text-red-500 font-medium">Remover chave</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </KeyboardAvoidingView>
+          </Animated.View>
+        </View>
+      </Modal>
 
       {/* ── Key Regeneration Modal ──────────────────────────────────────────── */}
       <Modal

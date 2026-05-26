@@ -316,12 +316,8 @@ describe('validateMnemonic', () => {
 // ── wordlist BIP-39 ───────────────────────────────────────────────────────────
 
 describe('WORDLIST BIP-39', () => {
-  it('tem pelo menos 1900 palavras (nota: BIP-39 standard = 2048)', () => {
-    // O wordlist atual tem 1907 palavras — 141 abaixo do padrão BIP-39.
-    // O app é auto-consistente (gera e valida com o mesmo wordlist),
-    // mas não é interoperável com outras carteiras BIP-39.
-    // TODO: completar para 2048 palavras antes da publicação.
-    expect(WORDLIST.length).toBeGreaterThanOrEqual(1900);
+  it('tem exactamente 2048 palavras (padrão BIP-39)', () => {
+    expect(WORDLIST.length).toBe(2048);
   });
 
   it('não tem palavras duplicadas', () => {

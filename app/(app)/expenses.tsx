@@ -1,14 +1,16 @@
-import { useState, useRef, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import {
-  View, Text, TouchableOpacity, TextInput, Modal,
-  Animated, Alert, ScrollView, Keyboard,
-  Platform, Pressable, ActivityIndicator,
+  View, Text, TouchableOpacity, Alert, ScrollView, ActivityIndicator,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useData } from '@/contexts/DataContext';
 import type { Expense, Category } from '@/contexts/DataContext';
+import { ExpenseInputSheet } from '@/components/ExpenseInputSheet';
+import { ExpensePreviewSheet, type PreviewInitial } from '@/components/ExpensePreviewSheet';
+import type { ExpenseDraft } from '@/lib/ai';
 
 // ── Formatters ────────────────────────────────────────────────────────────────
 
@@ -27,18 +29,22 @@ function todayIso() {
 
 const MONTH_LABELS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
+const EMPTY_PREVIEW: PreviewInitial = {
+  date: '', description: '', value_brl: 0, value_usd: 0, category_id: null,
+};
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type ListItem =
   | { type: 'header'; key: string; label: string }
   | { type: 'expense'; key: string; expense: Expense };
 
-type SheetMode = 'add' | 'edit';
-
 // ── Main screen ───────────────────────────────────────────────────────────────
 
 export default function ExpensesScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const params = useLocalSearchParams<{ shareText?: string }>();
   const {
     expenses, categories, loading, selectedYear,
     addExpense, updateExpenseCat, deleteExpense,
@@ -59,7 +65,6 @@ export default function ExpensesScreen() {
     [filtered],
   );
 
-  // Embed month-header items in the data array for FlashList
   const listData = useMemo<ListItem[]>(() => {
     const result: ListItem[] = [];
     let lastMonth = '';
@@ -78,7 +83,6 @@ export default function ExpensesScreen() {
     return result;
   }, [sorted, filterMonth]);
 
-  // Active months that have expenses (for filter chips)
   const activeMonths = useMemo(() => {
     const seen = new Set<number>();
     for (const e of expenses) {
@@ -87,138 +91,99 @@ export default function ExpensesScreen() {
     return Array.from(seen).sort((a, b) => a - b);
   }, [expenses, selectedYear]);
 
-  // ── Category map ───────────────────────────────────────────────────────────
   const catMap = useMemo(() => {
     const m: Record<string, Category> = {};
     for (const c of categories) m[c.category_id] = c;
     return m;
   }, [categories]);
 
-  // ── Bottom sheet ───────────────────────────────────────────────────────────
-  const [sheetVisible, setSheetVisible] = useState(false);
-  const [sheetMode, setSheetMode] = useState<SheetMode>('add');
+  // ── Sheet state ────────────────────────────────────────────────────────────
+  // 'input' = choose voz/texto/manual
+  // 'preview' = review fields and save
+  const [inputVisible, setInputVisible] = useState(false);
+  const [inputInitialText, setInputInitialText] = useState<string | undefined>(undefined);
+  const [previewVisible, setPreviewVisible] = useState(false);
+  const [previewInitial, setPreviewInitial] = useState<PreviewInitial>(EMPTY_PREVIEW);
+  const [previewMode, setPreviewMode] = useState<'add' | 'edit'>('add');
   const [editTarget, setEditTarget] = useState<Expense | null>(null);
 
-  // slideAnim: sheet slide-in (500 = off screen, 0 = visible)
-  const slideAnim    = useRef(new Animated.Value(500)).current;
-  // kbOffset: keyboard height in px (0 when hidden, >0 when shown)
-  const kbOffset     = useRef(new Animated.Value(0)).current;
-  // Combined transform: move sheet up by keyboard height when keyboard opens
-  const sheetTranslateY = useRef(Animated.subtract(slideAnim, kbOffset)).current;
-
-  // Listen to keyboard events ONLY while the sheet is visible
+  // ── Handle incoming share intent ───────────────────────────────────────────
   useEffect(() => {
-    if (!sheetVisible) {
-      kbOffset.setValue(0);
-      return;
+    const text = params.shareText;
+    if (text && typeof text === 'string' && text.trim()) {
+      setInputInitialText(text);
+      setInputVisible(true);
+      router.setParams({ shareText: undefined });
     }
-    // iOS: keyboardWill* for smooth animation matching system keyboard.
-    // Android: keyboardDid* (Will* is not fired on Android).
-    const showEvt = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvt = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.shareText]);
 
-    const onShow = Keyboard.addListener(showEvt, (e) => {
-      Animated.timing(kbOffset, {
-        toValue: e.endCoordinates.height,
-        duration: Platform.OS === 'ios' ? (e.duration ?? 250) : 180,
-        useNativeDriver: true,
-      }).start();
+  const openInput = useCallback(() => {
+    setInputInitialText(undefined);
+    setInputVisible(true);
+  }, []);
+
+  const openManualPreview = useCallback(() => {
+    setInputVisible(false);
+    setPreviewMode('add');
+    setEditTarget(null);
+    setPreviewInitial({
+      date: todayIso(),
+      description: '',
+      value_brl: 0,
+      value_usd: 0,
+      category_id: null,
     });
-    const onHide = Keyboard.addListener(hideEvt, () => {
-      Animated.timing(kbOffset, {
-        toValue: 0,
-        duration: 180,
-        useNativeDriver: true,
-      }).start();
+    setPreviewVisible(true);
+  }, []);
+
+  const openEditPreview = useCallback((expense: Expense) => {
+    setPreviewMode('edit');
+    setEditTarget(expense);
+    setPreviewInitial({
+      date: expense.date,
+      description: expense.description ?? '',
+      value_brl: expense.value_brl ?? 0,
+      value_usd: expense.value_usd ?? 0,
+      category_id: expense.category_id,
     });
-    return () => { onShow.remove(); onHide.remove(); };
-  }, [sheetVisible, kbOffset]);
+    setPreviewVisible(true);
+  }, []);
 
-  // Add form fields
-  const [date, setDate] = useState(todayIso);
-  const [description, setDescription] = useState('');
-  const [valueBrl, setValueBrl] = useState('');
-  const [valueUsd, setValueUsd] = useState('');
-  const [categoryId, setCategoryId] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  const handleParsed = useCallback((draft: ExpenseDraft) => {
+    setInputVisible(false);
+    setPreviewMode('add');
+    setEditTarget(null);
+    setPreviewInitial({
+      date: draft.date,
+      description: draft.description,
+      value_brl: draft.value_brl,
+      value_usd: draft.value_usd,
+      category_id: draft.category_id,
+      confidence: draft._confidence,
+    });
+    setPreviewVisible(true);
+  }, []);
 
-  // Auto-focus description field on open
-  const descriptionRef = useRef<TextInput>(null);
-
-  const openSheet = useCallback((mode: SheetMode, target?: Expense) => {
-    kbOffset.setValue(0); // reset any leftover keyboard offset
-    setSheetMode(mode);
-    if (mode === 'add') {
-      setDate(todayIso());
-      setDescription('');
-      setValueBrl('');
-      setValueUsd('');
-      setCategoryId(null);
-      setEditTarget(null);
-    } else if (target) {
-      setEditTarget(target);
-      setCategoryId(target.category_id);
+  const handleSave = useCallback(async (fields: {
+    date: string;
+    description: string;
+    value_brl: number;
+    value_usd: number;
+    category_id: string | null;
+  }) => {
+    if (previewMode === 'add') {
+      await addExpense(fields);
+    } else if (previewMode === 'edit' && editTarget) {
+      await updateExpenseCat(editTarget.expense_id, fields.category_id);
     }
-    setSheetVisible(true);
-    Animated.spring(slideAnim, {
-      toValue: 0, useNativeDriver: true, tension: 65, friction: 11,
-    }).start(() => {
-      if (mode === 'add') {
-        // Focus after animation finishes so the keyboard slides in cleanly
-        setTimeout(() => descriptionRef.current?.focus(), 80);
-      }
-    });
-  }, [slideAnim, kbOffset]);
+    setPreviewVisible(false);
+  }, [previewMode, editTarget, addExpense, updateExpenseCat]);
 
-  const closeSheet = useCallback(() => {
-    Keyboard.dismiss(); // dismiss keyboard before animating sheet out
-    kbOffset.setValue(0);
-    Animated.timing(slideAnim, {
-      toValue: 500, duration: 220, useNativeDriver: true,
-    }).start(() => setSheetVisible(false));
-  }, [slideAnim, kbOffset]);
-
-  const handleSave = useCallback(async () => {
-    if (sheetMode === 'add') {
-      const brl = parseFloat(valueBrl.replace(',', '.'));
-      if (!description.trim()) {
-        Alert.alert('Campo obrigatório', 'Preencha a descrição.');
-        return;
-      }
-      if (isNaN(brl) || brl <= 0) {
-        Alert.alert('Valor inválido', 'Informe um valor em BRL maior que zero.');
-        return;
-      }
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-        Alert.alert('Data inválida', 'Use o formato AAAA-MM-DD (ex: 2025-01-15).');
-        return;
-      }
-      setSaving(true);
-      try {
-        await addExpense({
-          date,
-          description: description.trim(),
-          category_id: categoryId,
-          value_brl: brl,
-          value_usd: parseFloat(valueUsd.replace(',', '.')) || 0,
-        });
-        closeSheet();
-      } catch {
-        Alert.alert('Erro', 'Não foi possível salvar o gasto.');
-      } finally {
-        setSaving(false);
-      }
-    } else if (sheetMode === 'edit' && editTarget) {
-      setSaving(true);
-      try {
-        await updateExpenseCat(editTarget.expense_id, categoryId);
-        closeSheet();
-      } finally {
-        setSaving(false);
-      }
-    }
-  }, [sheetMode, date, description, valueBrl, valueUsd, categoryId, editTarget,
-      addExpense, updateExpenseCat, closeSheet]);
+  const handlePreviewBack = useCallback(() => {
+    setPreviewVisible(false);
+    setInputVisible(true);
+  }, []);
 
   const handleDelete = useCallback((expense: Expense) => {
     Alert.alert(
@@ -251,7 +216,7 @@ export default function ExpensesScreen() {
     return (
       <TouchableOpacity
         className="mx-4 mb-2 bg-white rounded-xl px-4 py-3 flex-row items-center gap-3 shadow-sm"
-        onPress={() => openSheet('edit', e)}
+        onPress={() => openEditPreview(e)}
         onLongPress={() => handleDelete(e)}
         activeOpacity={0.75}
       >
@@ -280,7 +245,7 @@ export default function ExpensesScreen() {
         </View>
       </TouchableOpacity>
     );
-  }, [catMap, openSheet, handleDelete]);
+  }, [catMap, openEditPreview, handleDelete]);
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -356,7 +321,8 @@ export default function ExpensesScreen() {
 
       {/* FAB */}
       <TouchableOpacity
-        onPress={() => openSheet('add')}
+        testID="fab-add-expense"
+        onPress={openInput}
         className="absolute right-5 bg-blue-600 rounded-full w-14 h-14 items-center justify-center shadow-lg"
         style={{ bottom: insets.bottom + 20 }}
         activeOpacity={0.85}
@@ -364,201 +330,25 @@ export default function ExpensesScreen() {
         <Ionicons name="add" size={30} color="white" />
       </TouchableOpacity>
 
-      {/* ── Bottom Sheet ──────────────────────────────────────────────────────── */}
-      <Modal
-        visible={sheetVisible}
-        transparent
-        animationType="none"
-        onRequestClose={closeSheet}
-      >
-        {/*
-          Abordagem correta para Android + iOS com Modal:
-          - KeyboardAvoidingView NÃO funciona dentro de Modal no Android.
-          - Em vez disso, escutamos keyboardDid{Show,Hide} e animamos o sheet
-            para cima pela altura exata do teclado via kbOffset.
-          - O ScrollView interno garante que todos os campos ficam acessíveis.
-        */}
-        <View style={{ flex: 1 }}>
-          <Pressable
-            style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.45)' }}
-            onPress={closeSheet}
-          />
+      <ExpenseInputSheet
+        visible={inputVisible}
+        categories={categories}
+        initialText={inputInitialText}
+        onCancel={() => setInputVisible(false)}
+        onManual={openManualPreview}
+        onParsed={handleParsed}
+      />
 
-          <Animated.View
-            style={{
-              transform: [{ translateY: sheetTranslateY }],
-              backgroundColor: 'white',
-              borderTopLeftRadius: 24,
-              borderTopRightRadius: 24,
-            }}
-          >
-              {/* Handle */}
-              <View className="items-center pt-3 pb-1">
-                <View className="w-10 h-1 bg-gray-200 rounded-full" />
-              </View>
-
-              {/* Title row */}
-              <View className="flex-row items-center justify-between px-5 mb-2">
-                <Text className="text-base font-semibold text-gray-900">
-                  {sheetMode === 'add' ? 'Novo gasto' : 'Editar categoria'}
-                </Text>
-                <TouchableOpacity onPress={closeSheet}>
-                  <Ionicons name="close-circle" size={24} color="#9CA3AF" />
-                </TouchableOpacity>
-              </View>
-
-              {/* Conteúdo rolável — garante que tudo fique visível com teclado aberto */}
-              <ScrollView
-                bounces={false}
-                keyboardShouldPersistTaps="handled"
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={{
-                  paddingHorizontal: 20,
-                  paddingBottom: Math.max(insets.bottom + 16, 28),
-                  gap: 0,
-                }}
-              >
-                {/* ── Add mode fields ─────────────────────────────────────── */}
-                {sheetMode === 'add' && (
-                  <>
-                    {/* Descrição primeiro — campo com auto-focus */}
-                    <Text className="text-xs font-medium text-gray-500 mb-1.5 mt-2">
-                      Descrição
-                    </Text>
-                    <TextInput
-                      ref={descriptionRef}
-                      className="bg-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 mb-3"
-                      value={description}
-                      onChangeText={setDescription}
-                      placeholder="Ex: Almoço, Uber, Farmácia..."
-                      placeholderTextColor="#9CA3AF"
-                      returnKeyType="next"
-                      autoCapitalize="sentences"
-                      blurOnSubmit={false}
-                    />
-
-                    {/* Valores */}
-                    <View className="flex-row gap-3 mb-3">
-                      <View className="flex-1">
-                        <Text className="text-xs font-medium text-gray-500 mb-1.5">Valor BRL</Text>
-                        <TextInput
-                          className="bg-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800"
-                          value={valueBrl}
-                          onChangeText={setValueBrl}
-                          placeholder="0,00"
-                          placeholderTextColor="#9CA3AF"
-                          keyboardType="decimal-pad"
-                        />
-                      </View>
-                      <View className="flex-1">
-                        <Text className="text-xs font-medium text-gray-500 mb-1.5">
-                          Valor USD <Text className="text-gray-400">(opcional)</Text>
-                        </Text>
-                        <TextInput
-                          className="bg-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800"
-                          value={valueUsd}
-                          onChangeText={setValueUsd}
-                          placeholder="0.00"
-                          placeholderTextColor="#9CA3AF"
-                          keyboardType="decimal-pad"
-                        />
-                      </View>
-                    </View>
-
-                    {/* Data */}
-                    <Text className="text-xs font-medium text-gray-500 mb-1.5">
-                      Data (AAAA-MM-DD)
-                    </Text>
-                    <TextInput
-                      className="bg-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 mb-3"
-                      value={date}
-                      onChangeText={setDate}
-                      placeholder="2025-01-15"
-                      placeholderTextColor="#9CA3AF"
-                      maxLength={10}
-                      keyboardType="numbers-and-punctuation"
-                      autoCorrect={false}
-                    />
-                  </>
-                )}
-
-                {/* ── Edit mode hint ──────────────────────────────────────── */}
-                {sheetMode === 'edit' && editTarget && (
-                  <View className="bg-gray-50 rounded-xl px-4 py-3 mb-4 mt-2">
-                    <Text className="text-sm font-medium text-gray-700" numberOfLines={1}>
-                      {editTarget.description ?? '—'}
-                    </Text>
-                    <Text className="text-xs text-gray-400 mt-0.5">
-                      {fmtDate(editTarget.date)}  ·  {fmtBrl(editTarget.value_brl ?? 0)}
-                    </Text>
-                  </View>
-                )}
-
-                {/* ── Category selector ───────────────────────────────────── */}
-                <Text className="text-xs font-medium text-gray-500 mb-2">Categoria</Text>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={{ gap: 8, paddingBottom: 4 }}
-                  className="mb-5"
-                  keyboardShouldPersistTaps="handled"
-                >
-                  <TouchableOpacity
-                    onPress={() => setCategoryId(null)}
-                    className={`px-3 py-2 rounded-xl border ${
-                      categoryId === null
-                        ? 'bg-gray-800 border-gray-800'
-                        : 'bg-white border-gray-200'
-                    }`}
-                  >
-                    <Text
-                      className={`text-xs font-medium ${
-                        categoryId === null ? 'text-white' : 'text-gray-600'
-                      }`}
-                    >
-                      Sem cat.
-                    </Text>
-                  </TouchableOpacity>
-
-                  {categories.map(c => {
-                    const active = categoryId === c.category_id;
-                    return (
-                      <TouchableOpacity
-                        key={c.category_id}
-                        onPress={() => setCategoryId(c.category_id)}
-                        style={active
-                          ? { backgroundColor: c.color + '22', borderColor: c.color, borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 6 }
-                          : { backgroundColor: 'white', borderColor: '#E5E7EB', borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 6 }
-                        }
-                      >
-                        <Text className="text-xs">{c.icon}</Text>
-                        <Text
-                          className="text-xs font-medium"
-                          style={{ color: active ? c.color : '#4B5563' }}
-                        >
-                          {c.name}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
-
-                {/* Save button */}
-                <TouchableOpacity
-                  onPress={handleSave}
-                  disabled={saving}
-                  className="bg-blue-600 rounded-xl py-3.5 items-center"
-                  activeOpacity={0.85}
-                >
-                  {saving
-                    ? <ActivityIndicator color="white" />
-                    : <Text className="text-white font-semibold text-sm">Salvar</Text>
-                  }
-                </TouchableOpacity>
-              </ScrollView>
-          </Animated.View>
-        </View>
-      </Modal>
+      <ExpensePreviewSheet
+        visible={previewVisible}
+        mode={previewMode}
+        initial={previewInitial}
+        categories={categories}
+        editTarget={editTarget}
+        onCancel={() => setPreviewVisible(false)}
+        onBack={previewMode === 'add' ? handlePreviewBack : undefined}
+        onSave={handleSave}
+      />
     </View>
   );
 }

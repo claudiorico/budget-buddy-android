@@ -1,0 +1,34 @@
+appId: com.budgetbuddy.app
+name: "02 - Desbloquear cofre"
+---
+# PRÉ-REQUISITO: usuário já autenticado com Google (não usar clearState aqui).
+# Execute com: maestro test .maestro/02_vault_unlock.yaml --env VAULT_PASSWORD=suasenha
+#
+# Para usar em CI, passe a senha via variável de ambiente:
+#   VAULT_PASSWORD=suasenha maestro test .maestro/02_vault_unlock.yaml
+
+- launchApp:
+    stopApp: false
+
+- waitForAnimationToEnd
+
+# ── Tela de desbloqueio do cofre ─────────────────────────────────────────────
+
+- assertVisible: "Desbloquear Cofre"
+- assertVisible: "Senha do cofre"
+- assertVisible: "Esqueceu a senha? Use a chave de recuperação"
+
+# Digita a senha no campo (identificado por testID)
+- tapOn:
+    id: "vault-password-input"
+
+- inputText: "${VAULT_PASSWORD}"
+
+# Toca no botão Desbloquear
+- tapOn: "Desbloquear"
+
+# Aguarda a navegação para o app principal (tab bar visível)
+- assertVisible: "Início"
+- assertVisible: "Gastos"
+- assertVisible: "Metas"
+- assertVisible: "Perfil"

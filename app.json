@@ -30,6 +30,20 @@
       "react-native-quick-crypto",
       "@react-native-google-signin/google-signin",
       [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Permita o microfone para ditar gastos por voz.",
+          "speechRecognitionPermission": "Permita o reconhecimento de fala para transcrever gastos.",
+          "androidSpeechServicePackages": ["com.google.android.googlequicksearchbox"]
+        }
+      ],
+      [
+        "expo-share-intent",
+        {
+          "androidIntentFilters": ["text/*"]
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",

@@ -1,7 +1,7 @@
-import { useState, useRef, useMemo, useCallback } from 'react';
+import { useState, useRef, useMemo, useCallback, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity, TextInput, Modal,
-  Animated, Alert, ScrollView, KeyboardAvoidingView,
+  Animated, Alert, ScrollView, Keyboard,
   Platform, Pressable, ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -69,8 +69,28 @@ export default function GoalsScreen() {
 
   // ── Bottom sheets ──────────────────────────────────────────────────────────
   const [sheet, setSheet] = useState<Sheet>(null);
-  const slideAnim = useRef(new Animated.Value(500)).current;
+  const slideAnim  = useRef(new Animated.Value(500)).current;
+  const kbOffset   = useRef(new Animated.Value(0)).current;
+  const sheetTranslateY = useRef(Animated.subtract(slideAnim, kbOffset)).current;
   const [saving, setSaving] = useState(false);
+
+  // Teclado — só escuta enquanto o sheet está aberto
+  useEffect(() => {
+    if (!sheet) { kbOffset.setValue(0); return; }
+    const showEvt = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvt = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const onShow = Keyboard.addListener(showEvt, (e) => {
+      Animated.timing(kbOffset, {
+        toValue: e.endCoordinates.height,
+        duration: Platform.OS === 'ios' ? (e.duration ?? 250) : 180,
+        useNativeDriver: true,
+      }).start();
+    });
+    const onHide = Keyboard.addListener(hideEvt, () => {
+      Animated.timing(kbOffset, { toValue: 0, duration: 180, useNativeDriver: true }).start();
+    });
+    return () => { onShow.remove(); onHide.remove(); };
+  }, [sheet, kbOffset]);
 
   // Goal form
   const [goalCategoryId, setGoalCategoryId] = useState<string>('');
@@ -82,6 +102,7 @@ export default function GoalsScreen() {
   const [catIcon, setCatIcon] = useState('🛒');
 
   const openSheet = useCallback((s: Sheet) => {
+    kbOffset.setValue(0);
     setSheet(s);
     if (s === 'goal') {
       setGoalCategoryId(availableCategories[0]?.category_id ?? '');
@@ -94,13 +115,15 @@ export default function GoalsScreen() {
     Animated.spring(slideAnim, {
       toValue: 0, useNativeDriver: true, tension: 65, friction: 11,
     }).start();
-  }, [slideAnim, availableCategories]);
+  }, [slideAnim, kbOffset, availableCategories]);
 
   const closeSheet = useCallback(() => {
+    Keyboard.dismiss();
+    kbOffset.setValue(0);
     Animated.timing(slideAnim, {
       toValue: 500, duration: 220, useNativeDriver: true,
     }).start(() => setSheet(null));
-  }, [slideAnim]);
+  }, [slideAnim, kbOffset]);
 
   const handleAddGoal = useCallback(async () => {
     const limit = parseFloat(monthlyLimit.replace(',', '.'));
@@ -320,177 +343,179 @@ export default function GoalsScreen() {
           />
           <Animated.View
             style={{
-              transform: [{ translateY: slideAnim }],
+              transform: [{ translateY: sheetTranslateY }],
               backgroundColor: 'white',
               borderTopLeftRadius: 24,
               borderTopRightRadius: 24,
             }}
           >
-            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-              {/* Handle */}
-              <View className="items-center pt-3 pb-1">
-                <View className="w-10 h-1 bg-gray-200 rounded-full" />
-              </View>
+            {/* Handle */}
+            <View className="items-center pt-3 pb-1">
+              <View className="w-10 h-1 bg-gray-200 rounded-full" />
+            </View>
 
-              <View
-                className="px-5"
-                style={{ paddingBottom: Math.max(insets.bottom + 8, 24) }}
-              >
-                {/* ── Add Goal ──────────────────────────────────────────── */}
-                {sheet === 'goal' && (
-                  <>
-                    <View className="flex-row items-center justify-between mb-4">
-                      <Text className="text-base font-semibold text-gray-900">Nova meta mensal</Text>
-                      <TouchableOpacity onPress={closeSheet}>
-                        <Ionicons name="close-circle" size={24} color="#9CA3AF" />
-                      </TouchableOpacity>
-                    </View>
+            {/* Título */}
+            <View className="flex-row items-center justify-between px-5 mb-2">
+              <Text className="text-base font-semibold text-gray-900">
+                {sheet === 'goal' ? 'Nova meta mensal' : 'Nova categoria'}
+              </Text>
+              <TouchableOpacity onPress={closeSheet}>
+                <Ionicons name="close-circle" size={24} color="#9CA3AF" />
+              </TouchableOpacity>
+            </View>
 
-                    <Text className="text-xs font-medium text-gray-500 mb-2">Categoria</Text>
-                    <ScrollView
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                      contentContainerStyle={{ gap: 8, paddingBottom: 4 }}
-                      className="mb-4"
-                    >
-                      {availableCategories.map(c => {
-                        const active = goalCategoryId === c.category_id;
-                        return (
-                          <TouchableOpacity
-                            key={c.category_id}
-                            onPress={() => setGoalCategoryId(c.category_id)}
-                            style={{
-                              flexDirection: 'row', alignItems: 'center', gap: 6,
-                              paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12,
-                              borderWidth: 1,
-                              backgroundColor: active ? c.color + '22' : 'white',
-                              borderColor: active ? c.color : '#E5E7EB',
-                            }}
-                          >
-                            <Text className="text-sm">{c.icon}</Text>
-                            <Text
-                              className="text-xs font-medium"
-                              style={{ color: active ? c.color : '#4B5563' }}
-                            >
-                              {c.name}
-                            </Text>
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </ScrollView>
-
-                    <Text className="text-xs font-medium text-gray-500 mb-1.5">
-                      Limite mensal em BRL
-                    </Text>
-                    <TextInput
-                      className="bg-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 mb-4"
-                      value={monthlyLimit}
-                      onChangeText={setMonthlyLimit}
-                      placeholder="Ex: 500,00"
-                      placeholderTextColor="#9CA3AF"
-                      keyboardType="decimal-pad"
-                    />
-
-                    <TouchableOpacity
-                      onPress={handleAddGoal}
-                      disabled={saving}
-                      className="bg-blue-600 rounded-xl py-3.5 items-center"
-                      activeOpacity={0.85}
-                    >
-                      {saving
-                        ? <ActivityIndicator color="white" />
-                        : <Text className="text-white font-semibold text-sm">Criar meta</Text>
-                      }
-                    </TouchableOpacity>
-                  </>
-                )}
-
-                {/* ── Add Category ───────────────────────────────────────── */}
-                {sheet === 'category' && (
-                  <>
-                    <View className="flex-row items-center justify-between mb-4">
-                      <Text className="text-base font-semibold text-gray-900">Nova categoria</Text>
-                      <TouchableOpacity onPress={closeSheet}>
-                        <Ionicons name="close-circle" size={24} color="#9CA3AF" />
-                      </TouchableOpacity>
-                    </View>
-
-                    {/* Preview */}
-                    <View className="flex-row items-center gap-3 bg-gray-50 rounded-xl px-4 py-3 mb-4">
-                      <Text className="text-2xl">{catIcon}</Text>
-                      <View
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: catColor }}
-                      />
-                      <Text className="text-sm font-medium text-gray-700">
-                        {catName || 'Nome da categoria'}
-                      </Text>
-                    </View>
-
-                    <Text className="text-xs font-medium text-gray-500 mb-1.5">Nome</Text>
-                    <TextInput
-                      className="bg-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 mb-4"
-                      value={catName}
-                      onChangeText={setCatName}
-                      placeholder="Ex: Alimentação, Transporte..."
-                      placeholderTextColor="#9CA3AF"
-                      autoCapitalize="sentences"
-                      returnKeyType="done"
-                    />
-
-                    <Text className="text-xs font-medium text-gray-500 mb-2">Cor</Text>
-                    <View className="flex-row flex-wrap gap-3 mb-4">
-                      {PRESET_COLORS.map(color => (
+            <ScrollView
+              bounces={false}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{
+                paddingHorizontal: 20,
+                paddingBottom: Math.max(insets.bottom + 16, 28),
+              }}
+            >
+              {/* ── Nova meta ───────────────────────────────────────────── */}
+              {sheet === 'goal' && (
+                <>
+                  <Text className="text-xs font-medium text-gray-500 mb-2 mt-1">Categoria</Text>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={{ gap: 8, paddingBottom: 4 }}
+                    keyboardShouldPersistTaps="handled"
+                    className="mb-4"
+                  >
+                    {availableCategories.map(c => {
+                      const active = goalCategoryId === c.category_id;
+                      return (
                         <TouchableOpacity
-                          key={color}
-                          onPress={() => setCatColor(color)}
+                          key={c.category_id}
+                          onPress={() => setGoalCategoryId(c.category_id)}
                           style={{
-                            width: 28, height: 28, borderRadius: 14,
-                            backgroundColor: color,
-                            borderWidth: catColor === color ? 3 : 0,
-                            borderColor: 'white',
-                            shadowColor: catColor === color ? color : 'transparent',
-                            shadowOpacity: 0.5, shadowRadius: 4,
+                            flexDirection: 'row', alignItems: 'center', gap: 6,
+                            paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12,
+                            borderWidth: 1,
+                            backgroundColor: active ? c.color + '22' : 'white',
+                            borderColor: active ? c.color : '#E5E7EB',
                           }}
-                        />
-                      ))}
-                    </View>
-
-                    <Text className="text-xs font-medium text-gray-500 mb-2">Ícone</Text>
-                    <ScrollView
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                      contentContainerStyle={{ gap: 8, paddingBottom: 4 }}
-                      className="mb-4"
-                    >
-                      {PRESET_ICONS.map(icon => (
-                        <TouchableOpacity
-                          key={icon}
-                          onPress={() => setCatIcon(icon)}
-                          className={`w-10 h-10 items-center justify-center rounded-xl border ${
-                            catIcon === icon ? 'border-blue-400 bg-blue-50' : 'border-gray-200 bg-white'
-                          }`}
                         >
-                          <Text className="text-lg">{icon}</Text>
+                          <Text className="text-sm">{c.icon}</Text>
+                          <Text
+                            className="text-xs font-medium"
+                            style={{ color: active ? c.color : '#4B5563' }}
+                          >
+                            {c.name}
+                          </Text>
                         </TouchableOpacity>
-                      ))}
-                    </ScrollView>
+                      );
+                    })}
+                  </ScrollView>
 
-                    <TouchableOpacity
-                      onPress={handleAddCategory}
-                      disabled={saving}
-                      className="bg-blue-600 rounded-xl py-3.5 items-center"
-                      activeOpacity={0.85}
-                    >
-                      {saving
-                        ? <ActivityIndicator color="white" />
-                        : <Text className="text-white font-semibold text-sm">Criar categoria</Text>
-                      }
-                    </TouchableOpacity>
-                  </>
-                )}
-              </View>
-            </KeyboardAvoidingView>
+                  <Text className="text-xs font-medium text-gray-500 mb-1.5">
+                    Limite mensal em BRL
+                  </Text>
+                  <TextInput
+                    className="bg-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 mb-4"
+                    value={monthlyLimit}
+                    onChangeText={setMonthlyLimit}
+                    placeholder="Ex: 500,00"
+                    placeholderTextColor="#9CA3AF"
+                    keyboardType="decimal-pad"
+                  />
+
+                  <TouchableOpacity
+                    onPress={handleAddGoal}
+                    disabled={saving}
+                    className="bg-blue-600 rounded-xl py-3.5 items-center"
+                    activeOpacity={0.85}
+                  >
+                    {saving
+                      ? <ActivityIndicator color="white" />
+                      : <Text className="text-white font-semibold text-sm">Criar meta</Text>
+                    }
+                  </TouchableOpacity>
+                </>
+              )}
+
+              {/* ── Nova categoria ───────────────────────────────────────── */}
+              {sheet === 'category' && (
+                <>
+                  {/* Preview */}
+                  <View className="flex-row items-center gap-3 bg-gray-50 rounded-xl px-4 py-3 mb-4 mt-1">
+                    <Text className="text-2xl">{catIcon}</Text>
+                    <View
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: catColor }}
+                    />
+                    <Text className="text-sm font-medium text-gray-700">
+                      {catName || 'Nome da categoria'}
+                    </Text>
+                  </View>
+
+                  <Text className="text-xs font-medium text-gray-500 mb-1.5">Nome</Text>
+                  <TextInput
+                    className="bg-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 mb-4"
+                    value={catName}
+                    onChangeText={setCatName}
+                    placeholder="Ex: Alimentação, Transporte..."
+                    placeholderTextColor="#9CA3AF"
+                    autoCapitalize="sentences"
+                    returnKeyType="done"
+                    blurOnSubmit={false}
+                  />
+
+                  <Text className="text-xs font-medium text-gray-500 mb-2">Cor</Text>
+                  <View className="flex-row flex-wrap gap-3 mb-4">
+                    {PRESET_COLORS.map(color => (
+                      <TouchableOpacity
+                        key={color}
+                        onPress={() => setCatColor(color)}
+                        style={{
+                          width: 28, height: 28, borderRadius: 14,
+                          backgroundColor: color,
+                          borderWidth: catColor === color ? 3 : 0,
+                          borderColor: 'white',
+                          shadowColor: catColor === color ? color : 'transparent',
+                          shadowOpacity: 0.5, shadowRadius: 4,
+                        }}
+                      />
+                    ))}
+                  </View>
+
+                  <Text className="text-xs font-medium text-gray-500 mb-2">Ícone</Text>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={{ gap: 8, paddingBottom: 4 }}
+                    keyboardShouldPersistTaps="handled"
+                    className="mb-5"
+                  >
+                    {PRESET_ICONS.map(icon => (
+                      <TouchableOpacity
+                        key={icon}
+                        onPress={() => setCatIcon(icon)}
+                        className={`w-10 h-10 items-center justify-center rounded-xl border ${
+                          catIcon === icon ? 'border-blue-400 bg-blue-50' : 'border-gray-200 bg-white'
+                        }`}
+                      >
+                        <Text className="text-lg">{icon}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+
+                  <TouchableOpacity
+                    onPress={handleAddCategory}
+                    disabled={saving}
+                    className="bg-blue-600 rounded-xl py-3.5 items-center"
+                    activeOpacity={0.85}
+                  >
+                    {saving
+                      ? <ActivityIndicator color="white" />
+                      : <Text className="text-white font-semibold text-sm">Criar categoria</Text>
+                    }
+                  </TouchableOpacity>
+                </>
+              )}
+            </ScrollView>
           </Animated.View>
         </View>
       </Modal>
