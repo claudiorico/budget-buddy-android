@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  ScrollView, ActivityIndicator, Alert,
+  ScrollView, ActivityIndicator, Alert, Keyboard, Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
@@ -25,6 +25,17 @@ export default function VaultSetupScreen() {
   const [confirmed, setConfirmed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    const showEvt = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvt = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const onShow = Keyboard.addListener(showEvt, (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const onHide = Keyboard.addListener(hideEvt, () => setKeyboardHeight(0));
+    return () => { onShow.remove(); onHide.remove(); };
+  }, []);
 
   const words = mnemonic ? mnemonic.split(' ') : [];
 
@@ -84,8 +95,15 @@ export default function VaultSetupScreen() {
   return (
     <ScrollView
       className="flex-1 bg-white dark:bg-gray-900"
-      contentContainerClassName="flex-grow justify-center px-6 py-12"
+      contentContainerStyle={{
+        flexGrow: 1,
+        justifyContent: 'center',
+        paddingHorizontal: 24,
+        paddingTop: 48,
+        paddingBottom: keyboardHeight > 0 ? keyboardHeight + 24 : 48,
+      }}
       keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
     >
       {/* Header */}
       <View className="items-center mb-8">

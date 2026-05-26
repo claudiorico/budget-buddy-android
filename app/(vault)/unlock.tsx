@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  ScrollView, ActivityIndicator,
+  ScrollView, ActivityIndicator, Keyboard, Platform,
 } from 'react-native';
 import Animated, {
   useSharedValue, useAnimatedStyle,
@@ -26,6 +26,17 @@ export default function VaultUnlockScreen() {
 
   const bio = useBiometricVault();
   const [mode, setMode] = useState<Mode>('unlock');
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    const showEvt = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvt = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const onShow = Keyboard.addListener(showEvt, (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const onHide = Keyboard.addListener(hideEvt, () => setKeyboardHeight(0));
+    return () => { onShow.remove(); onHide.remove(); };
+  }, []);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [mnemonic, setMnemonic] = useState('');
@@ -190,8 +201,17 @@ export default function VaultUnlockScreen() {
   return (
     <ScrollView
       className="flex-1 bg-white dark:bg-gray-900"
-      contentContainerClassName="flex-grow justify-center px-6 py-12"
+      contentContainerStyle={{
+        flexGrow: 1,
+        justifyContent: 'center',
+        paddingHorizontal: 24,
+        paddingTop: 48,
+        // Adiciona padding-bottom igual à altura do teclado quando ele abre,
+        // empurrando o conteúdo centralizado pra cima e deixando tudo visível.
+        paddingBottom: keyboardHeight > 0 ? keyboardHeight + 24 : 48,
+      }}
       keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
     >
       {/* Header */}
       <View className="items-center mb-10">
