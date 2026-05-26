@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity, TextInput, Modal,
-  Animated, Alert, ScrollView, KeyboardAvoidingView, Keyboard,
+  Animated, Alert, ScrollView, Keyboard,
   Platform, Pressable, ActivityIndicator, Image,
 } from 'react-native';
 import * as Linking from 'expo-linking';
@@ -78,6 +78,30 @@ export default function ProfileScreen() {
   const [aiTestState, setAiTestState] = useState<AiTestState>('idle');
   const [aiTestMessage, setAiTestMessage] = useState('');
   const aiSlideAnim = useRef(new Animated.Value(500)).current;
+  const aiKbOffset = useRef(new Animated.Value(0)).current;
+  const aiSheetTranslateY = useRef(Animated.subtract(aiSlideAnim, aiKbOffset)).current;
+
+  useEffect(() => {
+    if (!aiModalVisible) {
+      aiKbOffset.setValue(0);
+      return;
+    }
+    const showEvt = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvt = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const onShow = Keyboard.addListener(showEvt, (e) => {
+      Animated.timing(aiKbOffset, {
+        toValue: e.endCoordinates.height,
+        duration: Platform.OS === 'ios' ? (e.duration ?? 250) : 180,
+        useNativeDriver: true,
+      }).start();
+    });
+    const onHide = Keyboard.addListener(hideEvt, () => {
+      Animated.timing(aiKbOffset, {
+        toValue: 0, duration: 180, useNativeDriver: true,
+      }).start();
+    });
+    return () => { onShow.remove(); onHide.remove(); };
+  }, [aiModalVisible, aiKbOffset]);
 
   // ── Key regen modal ────────────────────────────────────────────────────────
   const [modalVisible, setModalVisible] = useState(false);
@@ -89,6 +113,32 @@ export default function ProfileScreen() {
   const [regenError, setRegenError] = useState('');
   const [copied, setCopied] = useState(false);
   const slideAnim = useRef(new Animated.Value(500)).current;
+  // Mesma técnica do biometric modal: KeyboardAvoidingView não funciona dentro
+  // de Modal no Android — animamos o sheet pra cima pela altura do teclado.
+  const regenKbOffset = useRef(new Animated.Value(0)).current;
+  const regenSheetTranslateY = useRef(Animated.subtract(slideAnim, regenKbOffset)).current;
+
+  useEffect(() => {
+    if (!modalVisible) {
+      regenKbOffset.setValue(0);
+      return;
+    }
+    const showEvt = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvt = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const onShow = Keyboard.addListener(showEvt, (e) => {
+      Animated.timing(regenKbOffset, {
+        toValue: e.endCoordinates.height,
+        duration: Platform.OS === 'ios' ? (e.duration ?? 250) : 180,
+        useNativeDriver: true,
+      }).start();
+    });
+    const onHide = Keyboard.addListener(hideEvt, () => {
+      Animated.timing(regenKbOffset, {
+        toValue: 0, duration: 180, useNativeDriver: true,
+      }).start();
+    });
+    return () => { onShow.remove(); onHide.remove(); };
+  }, [modalVisible, regenKbOffset]);
 
   const openModal = useCallback(() => {
     setRegenStep('password');
@@ -533,13 +583,12 @@ export default function ProfileScreen() {
           />
           <Animated.View
             style={{
-              transform: [{ translateY: aiSlideAnim }],
+              transform: [{ translateY: aiSheetTranslateY }],
               backgroundColor: sheetBg,
               borderTopLeftRadius: 24,
               borderTopRightRadius: 24,
             }}
           >
-            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
               <View className="items-center pt-3 pb-1">
                 <View className="w-10 h-1 bg-gray-200 dark:bg-gray-700 rounded-full" />
               </View>
@@ -644,7 +693,6 @@ export default function ProfileScreen() {
                   </TouchableOpacity>
                 )}
               </View>
-            </KeyboardAvoidingView>
           </Animated.View>
         </View>
       </Modal>
@@ -756,13 +804,12 @@ export default function ProfileScreen() {
           />
           <Animated.View
             style={{
-              transform: [{ translateY: slideAnim }],
+              transform: [{ translateY: regenSheetTranslateY }],
               backgroundColor: sheetBg,
               borderTopLeftRadius: 24,
               borderTopRightRadius: 24,
             }}
           >
-            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
               {/* Handle */}
               <View className="items-center pt-3 pb-1">
                 <View className="w-10 h-1 bg-gray-200 dark:bg-gray-700 rounded-full" />
@@ -901,7 +948,6 @@ export default function ProfileScreen() {
                   </>
                 )}
               </View>
-            </KeyboardAvoidingView>
           </Animated.View>
         </View>
       </Modal>
