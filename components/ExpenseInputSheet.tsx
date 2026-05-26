@@ -150,13 +150,25 @@ export function ExpenseInputSheet({
       ExpoSpeechRecognitionModule.start({
         lang: 'pt-BR',
         interimResults: true,
-        continuous: false,
+        continuous: true,
+        addsPunctuation: true,
+        requiresOnDeviceRecognition: false,
+        contextualStrings: [
+          // Unidades monetárias e marcadores temporais
+          'reais', 'real', 'centavos', 'dólares', 'dólar',
+          'hoje', 'ontem', 'anteontem',
+          // Vocabulário comum de gastos no Brasil
+          'almoço', 'jantar', 'café', 'lanche', 'mercado', 'padaria', 'farmácia',
+          'gasolina', 'uber', '99', 'iFood', 'Rappi', 'Shopee', 'Mercado Livre',
+          // Nomes das categorias do próprio usuário (hint forte)
+          ...categories.map(c => c.name),
+        ],
       });
     } catch (e) {
       setRecording(false);
       Alert.alert('Erro', (e as Error).message);
     }
-  }, []);
+  }, [categories]);
 
   const stopVoice = useCallback(() => {
     if (recording) ExpoSpeechRecognitionModule.stop();

@@ -1,0 +1,64 @@
+appId: com.budgetbuddy.app
+name: "06 - IA tolerante a transcrição ruim (simula STT com erros)"
+---
+# Simula um texto vindo do speech-to-text com erros típicos:
+# - "alm soço" em vez de "almoço" (palavra quebrada)
+# - "reaes" em vez de "reais" (typo do STT)
+# - "oje" em vez de "hoje" (palavra truncada)
+
+- launchApp:
+    stopApp: true
+
+- waitForAnimationToEnd
+
+- runFlow:
+    when:
+      visible: "Development Build"
+    commands:
+      - tapOn:
+          text: "Gestão Financeira"
+          index: 1
+      - extendedWaitUntil:
+          visible:
+            text: "Desbloquear Cofre|Início|Olá,"
+          timeout: 30000
+
+- runFlow:
+    when:
+      visible: "Desbloquear Cofre"
+    commands:
+      - tapOn:
+          id: "vault-password-input"
+      - inputText: "${VAULT_PASSWORD}"
+      - tapOn: "Desbloquear"
+      - extendedWaitUntil:
+          visible: "Gastos"
+          timeout: 15000
+
+- tapOn: "Gastos"
+- waitForAnimationToEnd
+
+- tapOn:
+    id: "fab-add-expense"
+
+- assertVisible: "Adicionar gasto"
+- tapOn: "Descrever em texto"
+- assertVisible: "Conte o que aconteceu"
+
+# Texto com erros típicos de transcrição por voz (ASCII only - sem cedilha/acentos)
+- inputText: "alm soco vinte e cinco reaes oje"
+
+- tapOn: "Extrair com IA"
+
+- extendedWaitUntil:
+    visible:
+      text: "Revisar gasto|Erro da IA|Cota do Gemini"
+    timeout: 20000
+
+# Sucesso = preview com descrição que reconheceu "Almoço"
+- assertVisible: "Revisar gasto"
+- assertVisible: "Almoço"
+
+# Nenhum erro feio na UI
+- assertNotVisible: "RATE_LIMIT_EXCEEDED"
+- assertNotVisible: "Couldn't find a navigation context"
