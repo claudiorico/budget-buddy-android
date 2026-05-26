@@ -1,0 +1,62 @@
+appId: com.budgetbuddy.app
+name: "07 - Setup do desbloqueio por digital (UI + modal)"
+---
+# Cobre:
+# - Toggle "Desbloqueio por digital" aparece em Perfil > Segurança
+# - Modal de ativação abre, mostra TextInput de senha e botão "Ativar com digital"
+#
+# NÃO cobre (precisa interação biométrica real ou estado side-effects):
+# - Validação de senha (chama unlockVault que pode ter side effects)
+# - Toque na digital (impossível via Maestro)
+# - Persistência após restart
+
+- launchApp:
+    stopApp: true
+
+- waitForAnimationToEnd
+
+- runFlow:
+    when:
+      visible: "Development Build"
+    commands:
+      - tapOn:
+          text: "Gestão Financeira"
+          index: 1
+      - extendedWaitUntil:
+          visible:
+            text: "Desbloquear Cofre|Início|Olá,"
+          timeout: 30000
+
+- runFlow:
+    when:
+      visible: "Desbloquear Cofre"
+    commands:
+      - tapOn:
+          id: "vault-password-input"
+      - inputText: "${VAULT_PASSWORD}"
+      - tapOn: "Desbloquear"
+      - extendedWaitUntil:
+          visible: "Perfil"
+          timeout: 15000
+
+- tapOn: "Perfil"
+- assertVisible: "Segurança"
+- assertVisible: "Desbloqueio por digital"
+
+# Abre o modal de ativação
+- tapOn: "Desbloqueio por digital"
+
+- extendedWaitUntil:
+    visible: "Ativar desbloqueio por digital"
+    timeout: 5000
+
+- assertVisible: "Senha do cofre"
+- assertVisible: "Ativar com digital"
+
+# Sem JSON cru nem crash de navegação
+- assertNotVisible: "Couldn't find a navigation context"
+- assertNotVisible: "Something went wrong"
+
+# Fecha o modal pra deixar o app em estado limpo
+- tapOn:
+    point: "50%,5%"

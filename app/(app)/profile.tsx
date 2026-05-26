@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useVault } from '@/contexts/VaultContext';
 import { useGeminiKey } from '@/hooks/useGeminiKey';
 import { useTheme, type ThemePreference } from '@/hooks/useTheme';
+import { useBiometricVault } from '@/hooks/useBiometricVault';
 import { parseExpenseFromText } from '@/lib/ai';
 
 // ── Ko-fi ─────────────────────────────────────────────────────────────────────
@@ -29,11 +30,20 @@ type AiTestState = 'idle' | 'testing' | 'ok' | 'error';
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { user, signOut } = useAuth();
-  const { lockVault, regenerateRecoveryKey } = useVault();
+  const { lockVault, regenerateRecoveryKey, unlockVault } = useVault();
   const { apiKey, hasKey, setApiKey, clearKey } = useGeminiKey();
   const { preference: themePref, setPreference: setThemePref, scheme } = useTheme();
   const isDark = scheme === 'dark';
   const sheetBg = isDark ? '#111827' : 'white';
+  const bio = useBiometricVault();
+
+  // ── Biometric enable modal ────────────────────────────────────────────────
+  const [bioModalVisible, setBioModalVisible] = useState(false);
+  const [bioPassword, setBioPassword] = useState('');
+  const [bioPwdVisible, setBioPwdVisible] = useState(false);
+  const [bioBusy, setBioBusy] = useState(false);
+  const [bioError, setBioError] = useState('');
+  const bioSlideAnim = useRef(new Animated.Value(500)).current;
 
   // ── AI key modal ───────────────────────────────────────────────────────────
   const [aiModalVisible, setAiModalVisible] = useState(false);
@@ -193,6 +203,74 @@ export default function ProfileScreen() {
     Linking.openURL(GEMINI_KEY_URL);
   }, []);
 
+  // ── Biometric handlers ───────────────────────────────────────────────────
+  const openBioModal = useCallback(() => {
+    setBioPassword('');
+    setBioPwdVisible(false);
+    setBioError('');
+    setBioModalVisible(true);
+    Animated.spring(bioSlideAnim, {
+      toValue: 0, useNativeDriver: true, tension: 65, friction: 11,
+    }).start();
+  }, [bioSlideAnim]);
+
+  const closeBioModal = useCallback(() => {
+    Animated.timing(bioSlideAnim, {
+      toValue: 500, duration: 220, useNativeDriver: true,
+    }).start(() => setBioModalVisible(false));
+  }, [bioSlideAnim]);
+
+  const handleBioToggle = useCallback(() => {
+    if (bio.enabled) {
+      Alert.alert(
+        'Desativar desbloqueio por digital?',
+        'Você precisará digitar a senha do cofre toda vez.',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Desativar', style: 'destructive', onPress: () => bio.disable() },
+        ],
+      );
+    } else {
+      if (!bio.support.hasHardware) {
+        Alert.alert('Sem biometria', 'Este aparelho não tem leitor biométrico.');
+        return;
+      }
+      if (!bio.support.isEnrolled) {
+        Alert.alert(
+          'Cadastre uma digital',
+          'Vá em Configurações → Segurança → Biometria e cadastre uma digital antes de ativar.',
+        );
+        return;
+      }
+      openBioModal();
+    }
+  }, [bio, openBioModal]);
+
+  const handleBioConfirm = useCallback(async () => {
+    if (!bioPassword.trim()) {
+      setBioError('Digite sua senha do cofre.');
+      return;
+    }
+    setBioBusy(true);
+    setBioError('');
+    try {
+      // Valida a senha contra o vault antes de armazenar (sem desbloquear)
+      const ok = await unlockVault(bioPassword);
+      if (!ok) {
+        setBioError('Senha incorreta.');
+        return;
+      }
+      const enabled = await bio.enable(bioPassword);
+      if (!enabled) {
+        setBioError('Não foi possível ativar. Tente novamente.');
+        return;
+      }
+      closeBioModal();
+    } finally {
+      setBioBusy(false);
+    }
+  }, [bioPassword, bio, unlockVault, closeBioModal]);
+
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <View className="flex-1 bg-gray-50 dark:bg-gray-950" style={{ paddingTop: insets.top }}>
@@ -243,6 +321,22 @@ export default function ProfileScreen() {
             label="Bloquear cofre"
             subtitle="Limpa a chave da memória"
             onPress={handleLock}
+          />
+
+          <View className="mx-4 h-px bg-gray-100 dark:bg-gray-800" />
+
+          {/* Biometric unlock toggle */}
+          <ActionRow
+            icon="finger-print-outline"
+            iconColor="#0EA5E9"
+            label="Desbloqueio por digital"
+            subtitle={
+              !bio.support.hasHardware ? 'Não disponível neste aparelho'
+              : !bio.support.isEnrolled ? 'Cadastre uma digital no sistema'
+              : bio.enabled ? 'Ativado — toque pra desativar'
+              : 'Desativado — toque pra ativar'
+            }
+            onPress={handleBioToggle}
           />
 
           <View className="mx-4 h-px bg-gray-100 dark:bg-gray-800" />
@@ -523,6 +617,101 @@ export default function ProfileScreen() {
                     <Text className="text-xs text-red-500 font-medium">Remover chave</Text>
                   </TouchableOpacity>
                 )}
+              </View>
+            </KeyboardAvoidingView>
+          </Animated.View>
+        </View>
+      </Modal>
+
+      {/* ── Biometric Enable Modal ──────────────────────────────────────────── */}
+      <Modal
+        visible={bioModalVisible}
+        transparent
+        animationType="none"
+        onRequestClose={closeBioModal}
+      >
+        <View style={{ flex: 1 }}>
+          <Pressable
+            style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.45)' }}
+            onPress={closeBioModal}
+          />
+          <Animated.View
+            style={{
+              transform: [{ translateY: bioSlideAnim }],
+              backgroundColor: sheetBg,
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+            }}
+          >
+            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+              <View className="items-center pt-3 pb-1">
+                <View className="w-10 h-1 bg-gray-200 dark:bg-gray-700 rounded-full" />
+              </View>
+              <View
+                className="px-5"
+                style={{ paddingBottom: Math.max(insets.bottom + 8, 24) }}
+              >
+                <View className="flex-row items-center justify-between mb-1">
+                  <Text className="text-base font-semibold text-gray-900 dark:text-gray-100">
+                    Ativar desbloqueio por digital
+                  </Text>
+                  <TouchableOpacity onPress={closeBioModal}>
+                    <Ionicons name="close-circle" size={24} color="#9CA3AF" />
+                  </TouchableOpacity>
+                </View>
+                <Text className="text-xs text-gray-500 mb-3">
+                  Sua senha será guardada no Keystore protegido por biometria.
+                  Toque na digital para desbloquear o cofre.
+                </Text>
+
+                <Text className="text-xs font-medium text-gray-500 mb-1.5">
+                  Senha do cofre
+                </Text>
+                <View className="bg-gray-100 dark:bg-gray-800 rounded-xl flex-row items-center px-4 mb-3">
+                  <TextInput
+                    className="flex-1 py-3 text-sm text-gray-800 dark:text-gray-200"
+                    value={bioPassword}
+                    onChangeText={text => { setBioPassword(text); setBioError(''); }}
+                    secureTextEntry={!bioPwdVisible}
+                    placeholder="Digite a senha do cofre"
+                    placeholderTextColor="#9CA3AF"
+                    autoCapitalize="none"
+                    returnKeyType="done"
+                    onSubmitEditing={handleBioConfirm}
+                  />
+                  <TouchableOpacity onPress={() => setBioPwdVisible(v => !v)}>
+                    <Ionicons
+                      name={bioPwdVisible ? 'eye-off-outline' : 'eye-outline'}
+                      size={18}
+                      color="#9CA3AF"
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                {bioError ? (
+                  <Text className="text-xs text-red-500 mb-3">{bioError}</Text>
+                ) : (
+                  <View className="mb-3" />
+                )}
+
+                <TouchableOpacity
+                  onPress={handleBioConfirm}
+                  disabled={bioBusy}
+                  className="bg-sky-600 rounded-xl py-3.5 items-center flex-row justify-center gap-2"
+                  activeOpacity={0.85}
+                >
+                  {bioBusy
+                    ? <ActivityIndicator color="white" />
+                    : (
+                      <>
+                        <Ionicons name="finger-print" size={18} color="white" />
+                        <Text className="text-white font-semibold text-sm">
+                          Ativar com digital
+                        </Text>
+                      </>
+                    )
+                  }
+                </TouchableOpacity>
               </View>
             </KeyboardAvoidingView>
           </Animated.View>

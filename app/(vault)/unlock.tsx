@@ -8,9 +8,11 @@ import Animated, {
   withSequence, withTiming,
 } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { useVault } from '@/contexts/VaultContext';
 import { validateMnemonic } from '@/lib/crypto';
+import { useBiometricVault, unlockWithBiometric } from '@/hooks/useBiometricVault';
 
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_SECONDS = 30;
@@ -22,6 +24,7 @@ export default function VaultUnlockScreen() {
   const { signOut } = useAuth();
   const { unlockVault, recoverVault } = useVault();
 
+  const bio = useBiometricVault();
   const [mode, setMode] = useState<Mode>('unlock');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -86,6 +89,38 @@ export default function VaultUnlockScreen() {
       withTiming(0, { duration: 50 }),
     );
   };
+
+  // ── Biometric unlock ─────────────────────────────────────────────────────
+
+  const handleBiometricUnlock = async () => {
+    if (loading || isBlocked) return;
+    setError('');
+    setLoading(true);
+    try {
+      const pwd = await unlockWithBiometric();
+      if (!pwd) {
+        // Cancelado ou falhou — silencioso, usuário pode tentar de novo ou usar senha
+        return;
+      }
+      const ok = await unlockVault(pwd);
+      if (ok) {
+        router.replace('/(app)/dashboard');
+      } else {
+        // Senha guardada não bate mais — provavelmente trocou via recover
+        setError('Senha biométrica desatualizada. Use sua senha do cofre.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Auto-tentar biometria ao abrir a tela, se ativado
+  useEffect(() => {
+    if (bio.enabled && mode === 'unlock' && !isBlocked) {
+      handleBiometricUnlock();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bio.enabled]);
 
   // ── Unlock ────────────────────────────────────────────────────────────────
 
@@ -226,6 +261,21 @@ export default function VaultUnlockScreen() {
               <Text className="text-white font-semibold text-base">Desbloquear</Text>
             )}
           </TouchableOpacity>
+
+          {bio.enabled && (
+            <TouchableOpacity
+              testID="bio-unlock-btn"
+              onPress={handleBiometricUnlock}
+              disabled={loading || isBlocked}
+              className="flex-row items-center justify-center gap-2 border border-sky-500 dark:border-sky-400 rounded-xl py-3.5"
+              activeOpacity={0.85}
+            >
+              <Ionicons name="finger-print" size={20} color="#0EA5E9" />
+              <Text className="text-sky-600 dark:text-sky-400 font-semibold text-sm">
+                Usar digital
+              </Text>
+            </TouchableOpacity>
+          )}
 
           <TouchableOpacity
             onPress={() => switchMode('recover')}
