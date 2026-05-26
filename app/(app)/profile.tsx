@@ -1,7 +1,7 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity, TextInput, Modal,
-  Animated, Alert, ScrollView, KeyboardAvoidingView,
+  Animated, Alert, ScrollView, KeyboardAvoidingView, Keyboard,
   Platform, Pressable, ActivityIndicator, Image,
 } from 'react-native';
 import * as Linking from 'expo-linking';
@@ -44,6 +44,32 @@ export default function ProfileScreen() {
   const [bioBusy, setBioBusy] = useState(false);
   const [bioError, setBioError] = useState('');
   const bioSlideAnim = useRef(new Animated.Value(500)).current;
+  // Animação que sobe o sheet pela altura exata do teclado (KeyboardAvoidingView
+  // não funciona dentro de Modal no Android — mesmo workaround dos outros sheets).
+  const bioKbOffset = useRef(new Animated.Value(0)).current;
+  const bioSheetTranslateY = useRef(Animated.subtract(bioSlideAnim, bioKbOffset)).current;
+
+  useEffect(() => {
+    if (!bioModalVisible) {
+      bioKbOffset.setValue(0);
+      return;
+    }
+    const showEvt = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvt = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const onShow = Keyboard.addListener(showEvt, (e) => {
+      Animated.timing(bioKbOffset, {
+        toValue: e.endCoordinates.height,
+        duration: Platform.OS === 'ios' ? (e.duration ?? 250) : 180,
+        useNativeDriver: true,
+      }).start();
+    });
+    const onHide = Keyboard.addListener(hideEvt, () => {
+      Animated.timing(bioKbOffset, {
+        toValue: 0, duration: 180, useNativeDriver: true,
+      }).start();
+    });
+    return () => { onShow.remove(); onHide.remove(); };
+  }, [bioModalVisible, bioKbOffset]);
 
   // ── AI key modal ───────────────────────────────────────────────────────────
   const [aiModalVisible, setAiModalVisible] = useState(false);
@@ -637,13 +663,12 @@ export default function ProfileScreen() {
           />
           <Animated.View
             style={{
-              transform: [{ translateY: bioSlideAnim }],
+              transform: [{ translateY: bioSheetTranslateY }],
               backgroundColor: sheetBg,
               borderTopLeftRadius: 24,
               borderTopRightRadius: 24,
             }}
           >
-            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
               <View className="items-center pt-3 pb-1">
                 <View className="w-10 h-1 bg-gray-200 dark:bg-gray-700 rounded-full" />
               </View>
@@ -713,7 +738,6 @@ export default function ProfileScreen() {
                   }
                 </TouchableOpacity>
               </View>
-            </KeyboardAvoidingView>
           </Animated.View>
         </View>
       </Modal>
