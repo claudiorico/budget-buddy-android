@@ -2,7 +2,9 @@ import { GoogleGenAI, Type } from '@google/genai';
 import { storage } from './storage';
 
 const KEY_STORAGE_KEY = 'gemini_api_key';
-const MODEL = 'gemini-2.0-flash';
+// gemini-2.5-flash-lite tem free tier ativo (15 RPM, 1500 RPD).
+// gemini-2.0-flash saiu do free tier em vários projetos novos (quota=0).
+const MODEL = 'gemini-2.5-flash-lite';
 
 export type ExpenseDraft = {
   description: string;
@@ -23,6 +25,40 @@ export class MissingApiKeyError extends Error {
     super('Gemini API key not configured');
     this.name = 'MissingApiKeyError';
   }
+}
+
+export class GeminiApiError extends Error {
+  status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = 'GeminiApiError';
+    this.status = status;
+  }
+}
+
+/** Maps raw Gemini errors (often huge JSON blobs) to short, user-friendly messages. */
+function friendlyGeminiError(err: unknown): GeminiApiError | null {
+  const msg = err instanceof Error ? err.message : String(err);
+  const statusMatch = msg.match(/"code"\s*:\s*(\d{3})/) ?? msg.match(/\b(4\d{2}|5\d{2})\b/);
+  const status = statusMatch ? Number(statusMatch[1]) : 0;
+
+  if (status === 429 || /RATE_LIMIT_EXCEEDED|quota/i.test(msg)) {
+    return new GeminiApiError(429,
+      'Cota do Gemini atingida ou indisponível neste modelo. Aguarde alguns minutos ou troque a chave em Perfil → Configurar IA.',
+    );
+  }
+  if (status === 401 || status === 403 || /API_KEY|API key|unauthorized|permission/i.test(msg)) {
+    return new GeminiApiError(status || 401,
+      'Chave Gemini inválida ou sem permissão. Confira em Perfil → Configurar IA.',
+    );
+  }
+  if (status === 400) {
+    return new GeminiApiError(400, 'Requisição rejeitada pelo Gemini. Tente um texto mais simples.');
+  }
+  if (status >= 500) {
+    return new GeminiApiError(status, 'Servidor do Gemini indisponível. Tente novamente em instantes.');
+  }
+  return null;
 }
 
 export function getStoredApiKey(): string | null {
@@ -77,29 +113,36 @@ export async function parseExpenseFromText(
 
   const ai = new GoogleGenAI({ apiKey });
 
-  const response = await ai.models.generateContent({
-    model: MODEL,
-    contents: buildPrompt(text, categories),
-    config: {
-      responseMimeType: 'application/json',
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          description: { type: Type.STRING },
-          value_brl: { type: Type.NUMBER },
-          value_usd: { type: Type.NUMBER },
-          date: { type: Type.STRING },
-          category_id: { type: Type.STRING, nullable: true },
-          _confidence: { type: Type.STRING, enum: ['high', 'low'] },
+  let response;
+  try {
+    response = await ai.models.generateContent({
+      model: MODEL,
+      contents: buildPrompt(text, categories),
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            description: { type: Type.STRING },
+            value_brl: { type: Type.NUMBER },
+            value_usd: { type: Type.NUMBER },
+            date: { type: Type.STRING },
+            category_id: { type: Type.STRING, nullable: true },
+            _confidence: { type: Type.STRING, enum: ['high', 'low'] },
+          },
+          required: ['description', 'value_brl', 'value_usd', 'date', '_confidence'],
         },
-        required: ['description', 'value_brl', 'value_usd', 'date', '_confidence'],
+        temperature: 0.1,
       },
-      temperature: 0.1,
-    },
-  });
+    });
+  } catch (e) {
+    const friendly = friendlyGeminiError(e);
+    if (friendly) throw friendly;
+    throw e;
+  }
 
   const raw = response.text;
-  if (!raw) throw new Error('Empty response from Gemini');
+  if (!raw) throw new Error('Resposta vazia do Gemini');
 
   const parsed = JSON.parse(raw) as ExpenseDraft;
 

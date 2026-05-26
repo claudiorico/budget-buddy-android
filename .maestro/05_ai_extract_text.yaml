@@ -1,0 +1,59 @@
+appId: com.budgetbuddy.app
+name: "05 - Extrair gasto via IA (texto)"
+---
+- launchApp:
+    stopApp: true
+
+- waitForAnimationToEnd
+
+# Se caiu no Dev Launcher (stopApp matou a conexão), reconecta via recente
+- runFlow:
+    when:
+      visible: "Development Build"
+    commands:
+      - tapOn:
+          text: "Gestão Financeira"
+          index: 1
+      - extendedWaitUntil:
+          visible:
+            text: "Desbloquear Cofre|Início|Olá,"
+          timeout: 30000
+
+- runFlow:
+    when:
+      visible: "Desbloquear Cofre"
+    commands:
+      - tapOn:
+          id: "vault-password-input"
+      - inputText: "${VAULT_PASSWORD}"
+      - tapOn: "Desbloquear"
+      - extendedWaitUntil:
+          visible: "Gastos"
+          timeout: 15000
+
+- tapOn: "Gastos"
+- waitForAnimationToEnd
+
+- tapOn:
+    id: "fab-add-expense"
+
+- assertVisible: "Adicionar gasto"
+
+- tapOn: "Descrever em texto"
+- assertVisible: "Conte o que aconteceu"
+
+- inputText: "almoco 25 reais hoje"
+
+- tapOn: "Extrair com IA"
+
+- extendedWaitUntil:
+    visible:
+      text: "Revisar gasto|Erro da IA|Sem chave|Cota do Gemini|inv.lida"
+    timeout: 20000
+
+# JSON cru do Gemini NUNCA deve aparecer na UI
+- assertNotVisible: "RATE_LIMIT_EXCEEDED"
+- assertNotVisible: "quotaMetric"
+- assertNotVisible: "generativelanguage.googleapis.com"
+- assertNotVisible: "Couldn't find a navigation context"
+- assertNotVisible: "Something went wrong"
