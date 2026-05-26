@@ -38,8 +38,15 @@ name: "08 - Recuperar cofre com 12 palavras"
 
 - assertVisible: "Desbloquear Cofre"
 
+# Toca em qualquer área fora do TextInput pra fechar o teclado
+# (não usa hideKeyboard pq no Android ele dispara back e manda app pro background)
+- tapOn:
+    point: "50%,30%"
+- waitForAnimationToEnd
+
 # Toca no link de recuperação
-- tapOn: "Esqueceu a senha"
+- tapOn:
+    text: "Esqueceu.*"
 
 - extendedWaitUntil:
     visible: "Recuperar Cofre"
