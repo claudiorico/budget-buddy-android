@@ -17,7 +17,10 @@ export default function AppLayout() {
         headerShown: false,
         tabBarActiveTintColor: '#2563EB',
         tabBarInactiveTintColor: '#9CA3AF',
-        tabBarStyle: { borderTopWidth: 1, borderTopColor: '#F3F4F6' },
+        tabBarStyle: {
+          borderTopWidth: 0,
+          elevation: 0,
+        },
         tabBarLabelStyle: { fontSize: 11, fontWeight: '500' },
       }}
     >

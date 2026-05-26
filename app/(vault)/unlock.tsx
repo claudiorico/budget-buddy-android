@@ -154,14 +154,14 @@ export default function VaultUnlockScreen() {
 
   return (
     <ScrollView
-      className="flex-1 bg-white"
+      className="flex-1 bg-white dark:bg-gray-900"
       contentContainerClassName="flex-grow justify-center px-6 py-12"
       keyboardShouldPersistTaps="handled"
     >
       {/* Header */}
       <View className="items-center mb-10">
         <Text className="text-5xl mb-4">{mode === 'unlock' ? '🔒' : '🗝️'}</Text>
-        <Text className="text-2xl font-bold text-gray-900">
+        <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100">
           {mode === 'unlock' ? 'Desbloquear Cofre' : 'Recuperar Cofre'}
         </Text>
         <Text className="text-sm text-gray-500 mt-1 text-center leading-relaxed">
@@ -174,11 +174,11 @@ export default function VaultUnlockScreen() {
       {/* ── Lockout banner ───────────────────────────────────────────────── */}
 
       {isBlocked && (
-        <View className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4 items-center">
-          <Text className="text-red-700 font-semibold text-sm">
+        <View className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-xl p-4 mb-4 items-center">
+          <Text className="text-red-700 dark:text-red-300 font-semibold text-sm">
             Muitas tentativas incorretas
           </Text>
-          <Text className="text-red-600 text-xs mt-1">
+          <Text className="text-red-600 dark:text-red-400 text-xs mt-1">
             Tente novamente em {countdown}s
           </Text>
         </View>
@@ -189,11 +189,11 @@ export default function VaultUnlockScreen() {
       {mode === 'unlock' && (
         <View className="gap-4">
           <Animated.View style={animStyle} className="gap-1.5">
-            <Text className="text-sm font-medium text-gray-700">Senha do cofre</Text>
-            <View className="flex-row items-center border border-gray-300 rounded-xl px-4 bg-gray-50">
+            <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">Senha do cofre</Text>
+            <View className="flex-row items-center border border-gray-300 dark:border-gray-600 rounded-xl px-4 bg-gray-50 dark:bg-gray-800">
               <TextInput
                 testID="vault-password-input"
-                className="flex-1 py-3.5 text-base text-gray-900"
+                className="flex-1 py-3.5 text-base text-gray-900 dark:text-gray-100"
                 placeholder="Sua senha do cofre"
                 placeholderTextColor="#9CA3AF"
                 secureTextEntry={!showPassword}
@@ -205,7 +205,7 @@ export default function VaultUnlockScreen() {
                 autoFocus
               />
               <TouchableOpacity onPress={() => setShowPassword(v => !v)}>
-                <Text className="text-gray-400 text-sm">{showPassword ? 'Ocultar' : 'Ver'}</Text>
+                <Text className="text-gray-400 dark:text-gray-500 text-sm">{showPassword ? 'Ocultar' : 'Ver'}</Text>
               </TouchableOpacity>
             </View>
           </Animated.View>
@@ -231,7 +231,7 @@ export default function VaultUnlockScreen() {
             onPress={() => switchMode('recover')}
             className="items-center py-2"
           >
-            <Text className="text-sm text-blue-600">
+            <Text className="text-sm text-blue-600 dark:text-blue-400">
               Esqueceu a senha? Use a chave de recuperação
             </Text>
           </TouchableOpacity>
@@ -240,7 +240,7 @@ export default function VaultUnlockScreen() {
             onPress={signOut}
             className="items-center py-2"
           >
-            <Text className="text-sm text-gray-400">Sair da conta Google</Text>
+            <Text className="text-sm text-gray-400 dark:text-gray-600">Sair da conta Google</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -250,11 +250,11 @@ export default function VaultUnlockScreen() {
       {mode === 'recover' && (
         <View className="gap-4">
           <View className="gap-1.5">
-            <Text className="text-sm font-medium text-gray-700">
+            <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">
               12 palavras de recuperação
             </Text>
             <TextInput
-              className="border border-gray-300 rounded-xl px-4 py-3.5 text-base text-gray-900 bg-gray-50 font-mono"
+              className="border border-gray-300 dark:border-gray-600 rounded-xl px-4 py-3.5 text-base text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 font-mono"
               placeholder="palavra1 palavra2 palavra3 ..."
               placeholderTextColor="#9CA3AF"
               multiline
@@ -266,16 +266,16 @@ export default function VaultUnlockScreen() {
               autoCorrect={false}
               style={{ minHeight: 80 }}
             />
-            <Text className="text-xs text-gray-400">
+            <Text className="text-xs text-gray-400 dark:text-gray-600">
               Digite as 12 palavras separadas por espaço
             </Text>
           </View>
 
           <View className="gap-1.5">
-            <Text className="text-sm font-medium text-gray-700">Nova senha do cofre</Text>
-            <View className="flex-row items-center border border-gray-300 rounded-xl px-4 bg-gray-50">
+            <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">Nova senha do cofre</Text>
+            <View className="flex-row items-center border border-gray-300 dark:border-gray-600 rounded-xl px-4 bg-gray-50 dark:bg-gray-800">
               <TextInput
-                className="flex-1 py-3.5 text-base text-gray-900"
+                className="flex-1 py-3.5 text-base text-gray-900 dark:text-gray-100"
                 placeholder="Mínimo 8 caracteres"
                 placeholderTextColor="#9CA3AF"
                 secureTextEntry={!showNewPassword}
@@ -283,16 +283,16 @@ export default function VaultUnlockScreen() {
                 onChangeText={setNewPassword}
               />
               <TouchableOpacity onPress={() => setShowNewPassword(v => !v)}>
-                <Text className="text-gray-400 text-sm">{showNewPassword ? 'Ocultar' : 'Ver'}</Text>
+                <Text className="text-gray-400 dark:text-gray-500 text-sm">{showNewPassword ? 'Ocultar' : 'Ver'}</Text>
               </TouchableOpacity>
             </View>
           </View>
 
           <View className="gap-1.5">
-            <Text className="text-sm font-medium text-gray-700">Confirmar nova senha</Text>
-            <View className="flex-row items-center border border-gray-300 rounded-xl px-4 bg-gray-50">
+            <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">Confirmar nova senha</Text>
+            <View className="flex-row items-center border border-gray-300 dark:border-gray-600 rounded-xl px-4 bg-gray-50 dark:bg-gray-800">
               <TextInput
-                className="flex-1 py-3.5 text-base text-gray-900"
+                className="flex-1 py-3.5 text-base text-gray-900 dark:text-gray-100"
                 placeholder="Repita a nova senha"
                 placeholderTextColor="#9CA3AF"
                 secureTextEntry

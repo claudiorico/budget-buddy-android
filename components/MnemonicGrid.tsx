@@ -16,12 +16,12 @@ export function MnemonicGrid({ words }: Props) {
             return (
               <View
                 key={index}
-                className="flex-1 flex-row items-center bg-amber-50 border border-amber-200 rounded-xl px-2 py-2"
+                className="flex-1 flex-row items-center bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-xl px-2 py-2"
               >
                 <Text className="text-xs text-amber-400 w-5 font-medium">
                   {index + 1}.
                 </Text>
-                <Text className="font-mono text-sm font-semibold text-amber-900 flex-1">
+                <Text className="font-mono text-sm font-semibold text-amber-900 dark:text-amber-100 flex-1">
                   {word}
                 </Text>
               </View>

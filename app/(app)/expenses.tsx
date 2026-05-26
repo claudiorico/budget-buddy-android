@@ -205,7 +205,7 @@ export default function ExpensesScreen() {
     if (item.type === 'header') {
       return (
         <View className="px-4 pt-5 pb-1.5">
-          <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+          <Text className="text-xs font-semibold text-gray-400 dark:text-gray-600 uppercase tracking-wider">
             {item.label}
           </Text>
         </View>
@@ -215,7 +215,7 @@ export default function ExpensesScreen() {
     const cat = e.category_id ? catMap[e.category_id] : null;
     return (
       <TouchableOpacity
-        className="mx-4 mb-2 bg-white rounded-xl px-4 py-3 flex-row items-center gap-3 shadow-sm"
+        className="mx-4 mb-2 bg-white dark:bg-gray-900 rounded-xl px-4 py-3 flex-row items-center gap-3 shadow-sm"
         onPress={() => openEditPreview(e)}
         onLongPress={() => handleDelete(e)}
         activeOpacity={0.75}
@@ -225,15 +225,15 @@ export default function ExpensesScreen() {
           style={{ backgroundColor: cat?.color ?? '#94A3B8' }}
         />
         <View className="flex-1 min-w-0">
-          <Text className="text-sm font-medium text-gray-800" numberOfLines={1}>
+          <Text className="text-sm font-medium text-gray-800 dark:text-gray-200" numberOfLines={1}>
             {e.description ?? '—'}
           </Text>
-          <Text className="text-xs text-gray-400 mt-0.5">
+          <Text className="text-xs text-gray-400 dark:text-gray-600 mt-0.5">
             {fmtDate(e.date)}{cat ? `  ·  ${cat.name}` : ''}
           </Text>
         </View>
         <View className="flex-row items-center gap-2">
-          <Text className="text-sm font-semibold font-mono text-gray-800">
+          <Text className="text-sm font-semibold font-mono text-gray-800 dark:text-gray-200">
             {fmtBrl(e.value_brl ?? 0)}
           </Text>
           <TouchableOpacity
@@ -249,14 +249,14 @@ export default function ExpensesScreen() {
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <View className="flex-1 bg-gray-50" style={{ paddingTop: insets.top }}>
+    <View className="flex-1 bg-gray-50 dark:bg-gray-950" style={{ paddingTop: insets.top }}>
       {/* Header */}
       <View className="px-4 pt-3 pb-2 flex-row items-end justify-between">
         <View>
-          <Text className="text-xl font-bold text-gray-900">Gastos</Text>
+          <Text className="text-xl font-bold text-gray-900 dark:text-gray-100">Gastos</Text>
           <Text className="text-sm text-gray-500">{selectedYear}</Text>
         </View>
-        <Text className="text-xs text-gray-400">
+        <Text className="text-xs text-gray-400 dark:text-gray-600">
           {filtered.length} registro{filtered.length !== 1 ? 's' : ''}
         </Text>
       </View>
@@ -271,9 +271,9 @@ export default function ExpensesScreen() {
         >
           <TouchableOpacity
             onPress={() => setFilterMonth(null)}
-            className={`px-3 py-1.5 rounded-full ${filterMonth === null ? 'bg-blue-600' : 'bg-white border border-gray-200'}`}
+            className={`px-3 py-1.5 rounded-full ${filterMonth === null ? 'bg-blue-600' : 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700'}`}
           >
-            <Text className={`text-xs font-medium ${filterMonth === null ? 'text-white' : 'text-gray-600'}`}>
+            <Text className={`text-xs font-medium ${filterMonth === null ? 'text-white' : 'text-gray-600 dark:text-gray-400'}`}>
               Todos
             </Text>
           </TouchableOpacity>
@@ -281,9 +281,9 @@ export default function ExpensesScreen() {
             <TouchableOpacity
               key={m}
               onPress={() => setFilterMonth(m)}
-              className={`px-3 py-1.5 rounded-full ${filterMonth === m ? 'bg-blue-600' : 'bg-white border border-gray-200'}`}
+              className={`px-3 py-1.5 rounded-full ${filterMonth === m ? 'bg-blue-600' : 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700'}`}
             >
-              <Text className={`text-xs font-medium ${filterMonth === m ? 'text-white' : 'text-gray-600'}`}>
+              <Text className={`text-xs font-medium ${filterMonth === m ? 'text-white' : 'text-gray-600 dark:text-gray-400'}`}>
                 {MONTH_LABELS[m - 1]}
               </Text>
             </TouchableOpacity>
@@ -295,17 +295,17 @@ export default function ExpensesScreen() {
       {loading && !expenses.length ? (
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator size="large" color="#2563EB" />
-          <Text className="text-gray-400 text-sm mt-3">Carregando...</Text>
+          <Text className="text-gray-400 dark:text-gray-600 text-sm mt-3">Carregando...</Text>
         </View>
       ) : listData.length === 0 ? (
         <View className="flex-1 items-center justify-center px-8">
           <Text className="text-4xl mb-3">💸</Text>
-          <Text className="text-gray-600 font-medium text-center">
+          <Text className="text-gray-600 dark:text-gray-400 font-medium text-center">
             {filterMonth !== null
               ? `Nenhum gasto em ${MONTH_LABELS[filterMonth - 1]}`
               : `Nenhum gasto em ${selectedYear}`}
           </Text>
-          <Text className="text-gray-400 text-sm text-center mt-1">
+          <Text className="text-gray-400 dark:text-gray-600 text-sm text-center mt-1">
             Toque em + para adicionar o primeiro.
           </Text>
         </View>

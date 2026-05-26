@@ -44,7 +44,7 @@ export function MonthlyBarChart({ data, height = 180 }: Props) {
       {/* Month labels below chart */}
       <View className="flex-row justify-around mt-1 px-1">
         {MONTH_ABBR.map((m, i) => (
-          <Text key={i} className="text-xs text-gray-400 w-5 text-center">
+          <Text key={i} className="text-xs text-gray-400 dark:text-gray-600 w-5 text-center">
             {m}
           </Text>
         ))}

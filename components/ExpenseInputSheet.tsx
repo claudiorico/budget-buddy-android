@@ -9,6 +9,7 @@ import {
   ExpoSpeechRecognitionModule,
   useSpeechRecognitionEvent,
 } from 'expo-speech-recognition';
+import { useColorScheme } from 'nativewind';
 import { parseExpenseFromText, MissingApiKeyError, type ExpenseDraft } from '@/lib/ai';
 import { useGeminiKey } from '@/hooks/useGeminiKey';
 import type { Category } from '@/contexts/DataContext';
@@ -29,6 +30,8 @@ export function ExpenseInputSheet({
 }: Props) {
   const insets = useSafeAreaInsets();
   const { hasKey } = useGeminiKey();
+  const { colorScheme } = useColorScheme();
+  const sheetBg = colorScheme === 'dark' ? '#111827' : 'white';
 
   const [stage, setStage] = useState<InputStage>('choose');
   const [text, setText] = useState('');
@@ -174,13 +177,13 @@ export function ExpenseInputSheet({
         <Animated.View
           style={{
             transform: [{ translateY: sheetTranslateY }],
-            backgroundColor: 'white',
+            backgroundColor: sheetBg,
             borderTopLeftRadius: 24,
             borderTopRightRadius: 24,
           }}
         >
           <View className="items-center pt-3 pb-1">
-            <View className="w-10 h-1 bg-gray-200 rounded-full" />
+            <View className="w-10 h-1 bg-gray-200 dark:bg-gray-700 rounded-full" />
           </View>
 
           <View className="flex-row items-center justify-between px-5 mb-2">
@@ -190,7 +193,7 @@ export function ExpenseInputSheet({
                   <Ionicons name="chevron-back" size={22} color="#6B7280" />
                 </TouchableOpacity>
               )}
-              <Text className="text-base font-semibold text-gray-900">
+              <Text className="text-base font-semibold text-gray-900 dark:text-gray-100">
                 {stage === 'choose' && 'Adicionar gasto'}
                 {stage === 'voice' && 'Ditar gasto'}
                 {stage === 'text' && 'Descrever em texto'}
@@ -213,9 +216,9 @@ export function ExpenseInputSheet({
             {stage === 'choose' && (
               <View className="gap-3 mt-2">
                 {!hasKey && (
-                  <View className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 flex-row items-center gap-2 mb-1">
+                  <View className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-xl px-3 py-2.5 flex-row items-center gap-2 mb-1">
                     <Ionicons name="information-circle-outline" size={16} color="#D97706" />
-                    <Text className="text-xs text-amber-700 flex-1">
+                    <Text className="text-xs text-amber-700 dark:text-amber-300 flex-1">
                       Configure a IA no Perfil para usar texto/voz.
                     </Text>
                   </View>
@@ -253,7 +256,7 @@ export function ExpenseInputSheet({
                   Conte o que aconteceu
                 </Text>
                 <TextInput
-                  className="bg-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 mb-3"
+                  className="bg-gray-100 dark:bg-gray-800 rounded-xl px-4 py-3 text-sm text-gray-800 dark:text-gray-200 mb-3"
                   value={text}
                   onChangeText={setText}
                   placeholder="Ex: Uber pro centro ontem 28,50"
@@ -300,14 +303,14 @@ export function ExpenseInputSheet({
                   />
                 </TouchableOpacity>
 
-                <Text className="text-xs text-gray-400 mt-3">
+                <Text className="text-xs text-gray-400 dark:text-gray-600 mt-3">
                   {recording ? 'Ouvindo… toque para parar' : 'Toque para falar'}
                 </Text>
 
                 {voiceText ? (
-                  <View className="w-full bg-gray-50 rounded-xl px-4 py-3 mt-5 mb-3">
-                    <Text className="text-xs text-gray-400 mb-1">Transcrição</Text>
-                    <Text className="text-sm text-gray-800">{voiceText}</Text>
+                  <View className="w-full bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3 mt-5 mb-3">
+                    <Text className="text-xs text-gray-400 dark:text-gray-600 mb-1">Transcrição</Text>
+                    <Text className="text-sm text-gray-800 dark:text-gray-200">{voiceText}</Text>
                   </View>
                 ) : null}
 
@@ -350,7 +353,9 @@ function ChoiceButton({
       disabled={disabled}
       activeOpacity={0.75}
       className={`flex-row items-center gap-3 rounded-2xl border px-4 py-3.5 ${
-        disabled ? 'bg-gray-50 border-gray-100 opacity-50' : 'bg-white border-gray-200'
+        disabled
+          ? 'bg-gray-50 dark:bg-gray-800 border-gray-100 dark:border-gray-700 opacity-50'
+          : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
       }`}
     >
       <View
@@ -360,8 +365,8 @@ function ChoiceButton({
         <Ionicons name={icon} size={22} color={iconColor} />
       </View>
       <View className="flex-1">
-        <Text className="text-sm font-semibold text-gray-800">{label}</Text>
-        <Text className="text-xs text-gray-400 mt-0.5">{subtitle}</Text>
+        <Text className="text-sm font-semibold text-gray-800 dark:text-gray-200">{label}</Text>
+        <Text className="text-xs text-gray-400 dark:text-gray-600 mt-0.5">{subtitle}</Text>
       </View>
       <Ionicons name="chevron-forward" size={16} color="#D1D5DB" />
     </TouchableOpacity>

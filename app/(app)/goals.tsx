@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useColorScheme } from 'nativewind';
 import { useData } from '@/contexts/DataContext';
 import { computeGoalsProgress } from '@/lib/aggregations';
 
@@ -48,6 +49,9 @@ type Sheet = 'goal' | 'category' | null;
 export default function GoalsScreen() {
   const insets = useSafeAreaInsets();
   const { expenses, categories, goals, loading, addGoal, deleteGoal, addCategory } = useData();
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const sheetBg = isDark ? '#111827' : 'white';
 
   const month = currentMonthPrefix();
   const goalsProgress = useMemo(
@@ -183,32 +187,32 @@ export default function GoalsScreen() {
   // ── Render ─────────────────────────────────────────────────────────────────
   if (loading && !goals.length && !categories.length) {
     return (
-      <View className="flex-1 bg-gray-50 items-center justify-center" style={{ paddingTop: insets.top }}>
+      <View className="flex-1 bg-gray-50 dark:bg-gray-950 items-center justify-center" style={{ paddingTop: insets.top }}>
         <ActivityIndicator size="large" color="#2563EB" />
       </View>
     );
   }
 
   return (
-    <View className="flex-1 bg-gray-50" style={{ paddingTop: insets.top }}>
+    <View className="flex-1 bg-gray-50 dark:bg-gray-950" style={{ paddingTop: insets.top }}>
       <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 88 }}>
         {/* Header */}
         <View className="px-4 pt-3 pb-4">
-          <Text className="text-xl font-bold text-gray-900">Metas</Text>
+          <Text className="text-xl font-bold text-gray-900 dark:text-gray-100">Metas</Text>
           <Text className="text-sm text-gray-500">{currentMonthLabel()}</Text>
         </View>
 
         {/* ── Goals section ──────────────────────────────────────────────── */}
         {goalsProgress.length === 0 ? (
-          <View className="mx-4 mb-4 bg-white rounded-2xl p-6 items-center shadow-sm">
+          <View className="mx-4 mb-4 bg-white dark:bg-gray-900 rounded-2xl p-6 items-center shadow-sm">
             <Text className="text-3xl mb-2">🎯</Text>
-            <Text className="text-gray-600 font-medium text-center">Nenhuma meta definida</Text>
-            <Text className="text-gray-400 text-sm text-center mt-1">
+            <Text className="text-gray-600 dark:text-gray-400 font-medium text-center">Nenhuma meta definida</Text>
+            <Text className="text-gray-400 dark:text-gray-600 text-sm text-center mt-1">
               Defina limites mensais por categoria para acompanhar seus gastos.
             </Text>
           </View>
         ) : (
-          <View className="mx-4 mb-4 bg-white rounded-2xl p-4 shadow-sm gap-5">
+          <View className="mx-4 mb-4 bg-white dark:bg-gray-900 rounded-2xl p-4 shadow-sm gap-5">
             {goalsProgress.map(g => {
               const rawPct = g.monthly_limit > 0 ? (g.spent / g.monthly_limit) * 100 : 0;
               const displayPct = Math.round(rawPct);
@@ -227,7 +231,7 @@ export default function GoalsScreen() {
                         className="w-2 h-2 rounded-full"
                         style={{ backgroundColor: g.category_color }}
                       />
-                      <Text className="text-sm font-medium text-gray-700 flex-1" numberOfLines={1}>
+                      <Text className="text-sm font-medium text-gray-700 dark:text-gray-300 flex-1" numberOfLines={1}>
                         {g.category_name}
                       </Text>
                     </View>
@@ -245,7 +249,7 @@ export default function GoalsScreen() {
                   </View>
 
                   {/* Progress bar */}
-                  <View className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                  <View className="h-2.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
                     <View
                       className="h-full rounded-full"
                       style={{ width: `${barWidth}%`, backgroundColor: barColor }}
@@ -254,17 +258,17 @@ export default function GoalsScreen() {
 
                   <View className="flex-row items-center justify-between mt-1">
                     {rawPct >= 100 && (
-                      <Text className="text-xs font-medium text-red-600">
+                      <Text className="text-xs font-medium text-red-600 dark:text-red-400">
                         🚨 Limite atingido
                       </Text>
                     )}
                     {rawPct >= 80 && rawPct < 100 && (
-                      <Text className="text-xs font-medium text-amber-600">
+                      <Text className="text-xs font-medium text-amber-600 dark:text-amber-400">
                         ⚠️ Atenção
                       </Text>
                     )}
                     {rawPct < 80 && <View />}
-                    <Text className="text-xs text-gray-400">{displayPct}%</Text>
+                    <Text className="text-xs text-gray-400 dark:text-gray-600">{displayPct}%</Text>
                   </View>
                 </View>
               );
@@ -273,20 +277,20 @@ export default function GoalsScreen() {
         )}
 
         {/* ── Categories section ─────────────────────────────────────────── */}
-        <View className="mx-4 mb-4 bg-white rounded-2xl p-4 shadow-sm">
+        <View className="mx-4 mb-4 bg-white dark:bg-gray-900 rounded-2xl p-4 shadow-sm">
           <View className="flex-row items-center justify-between mb-3">
-            <Text className="text-sm font-semibold text-gray-800">Categorias</Text>
+            <Text className="text-sm font-semibold text-gray-800 dark:text-gray-200">Categorias</Text>
             <TouchableOpacity
               onPress={() => openSheet('category')}
-              className="flex-row items-center gap-1 px-3 py-1.5 bg-blue-50 rounded-lg"
+              className="flex-row items-center gap-1 px-3 py-1.5 bg-blue-50 dark:bg-blue-950 rounded-lg"
             >
               <Ionicons name="add" size={14} color="#2563EB" />
-              <Text className="text-xs font-medium text-blue-600">Nova</Text>
+              <Text className="text-xs font-medium text-blue-600 dark:text-blue-400">Nova</Text>
             </TouchableOpacity>
           </View>
 
           {categories.length === 0 ? (
-            <Text className="text-sm text-gray-400 text-center py-4">
+            <Text className="text-sm text-gray-400 dark:text-gray-600 text-center py-4">
               Nenhuma categoria. Crie uma para começar.
             </Text>
           ) : (
@@ -303,10 +307,10 @@ export default function GoalsScreen() {
                       className="w-2.5 h-2.5 rounded-full"
                       style={{ backgroundColor: c.color }}
                     />
-                    <Text className="text-sm text-gray-700 flex-1">{c.name}</Text>
+                    <Text className="text-sm text-gray-700 dark:text-gray-300 flex-1">{c.name}</Text>
                     {hasGoal && (
-                      <View className="bg-blue-50 px-2 py-0.5 rounded-full">
-                        <Text className="text-xs text-blue-600 font-medium">com meta</Text>
+                      <View className="bg-blue-50 dark:bg-blue-950 px-2 py-0.5 rounded-full">
+                        <Text className="text-xs text-blue-600 dark:text-blue-400 font-medium">com meta</Text>
                       </View>
                     )}
                   </View>
@@ -344,19 +348,19 @@ export default function GoalsScreen() {
           <Animated.View
             style={{
               transform: [{ translateY: sheetTranslateY }],
-              backgroundColor: 'white',
+              backgroundColor: sheetBg,
               borderTopLeftRadius: 24,
               borderTopRightRadius: 24,
             }}
           >
             {/* Handle */}
             <View className="items-center pt-3 pb-1">
-              <View className="w-10 h-1 bg-gray-200 rounded-full" />
+              <View className="w-10 h-1 bg-gray-200 dark:bg-gray-700 rounded-full" />
             </View>
 
             {/* Título */}
             <View className="flex-row items-center justify-between px-5 mb-2">
-              <Text className="text-base font-semibold text-gray-900">
+              <Text className="text-base font-semibold text-gray-900 dark:text-gray-100">
                 {sheet === 'goal' ? 'Nova meta mensal' : 'Nova categoria'}
               </Text>
               <TouchableOpacity onPress={closeSheet}>
@@ -386,6 +390,9 @@ export default function GoalsScreen() {
                   >
                     {availableCategories.map(c => {
                       const active = goalCategoryId === c.category_id;
+                      const inactiveBg = isDark ? '#1F2937' : 'white';
+                      const inactiveBorder = isDark ? '#374151' : '#E5E7EB';
+                      const inactiveText = isDark ? '#9CA3AF' : '#4B5563';
                       return (
                         <TouchableOpacity
                           key={c.category_id}
@@ -394,14 +401,14 @@ export default function GoalsScreen() {
                             flexDirection: 'row', alignItems: 'center', gap: 6,
                             paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12,
                             borderWidth: 1,
-                            backgroundColor: active ? c.color + '22' : 'white',
-                            borderColor: active ? c.color : '#E5E7EB',
+                            backgroundColor: active ? c.color + '22' : inactiveBg,
+                            borderColor: active ? c.color : inactiveBorder,
                           }}
                         >
                           <Text className="text-sm">{c.icon}</Text>
                           <Text
                             className="text-xs font-medium"
-                            style={{ color: active ? c.color : '#4B5563' }}
+                            style={{ color: active ? c.color : inactiveText }}
                           >
                             {c.name}
                           </Text>
@@ -414,7 +421,7 @@ export default function GoalsScreen() {
                     Limite mensal em BRL
                   </Text>
                   <TextInput
-                    className="bg-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 mb-4"
+                    className="bg-gray-100 dark:bg-gray-800 rounded-xl px-4 py-3 text-sm text-gray-800 dark:text-gray-200 mb-4"
                     value={monthlyLimit}
                     onChangeText={setMonthlyLimit}
                     placeholder="Ex: 500,00"
@@ -440,20 +447,20 @@ export default function GoalsScreen() {
               {sheet === 'category' && (
                 <>
                   {/* Preview */}
-                  <View className="flex-row items-center gap-3 bg-gray-50 rounded-xl px-4 py-3 mb-4 mt-1">
+                  <View className="flex-row items-center gap-3 bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3 mb-4 mt-1">
                     <Text className="text-2xl">{catIcon}</Text>
                     <View
                       className="w-3 h-3 rounded-full"
                       style={{ backgroundColor: catColor }}
                     />
-                    <Text className="text-sm font-medium text-gray-700">
+                    <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">
                       {catName || 'Nome da categoria'}
                     </Text>
                   </View>
 
                   <Text className="text-xs font-medium text-gray-500 mb-1.5">Nome</Text>
                   <TextInput
-                    className="bg-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 mb-4"
+                    className="bg-gray-100 dark:bg-gray-800 rounded-xl px-4 py-3 text-sm text-gray-800 dark:text-gray-200 mb-4"
                     value={catName}
                     onChangeText={setCatName}
                     placeholder="Ex: Alimentação, Transporte..."
@@ -494,7 +501,9 @@ export default function GoalsScreen() {
                         key={icon}
                         onPress={() => setCatIcon(icon)}
                         className={`w-10 h-10 items-center justify-center rounded-xl border ${
-                          catIcon === icon ? 'border-blue-400 bg-blue-50' : 'border-gray-200 bg-white'
+                          catIcon === icon
+                            ? 'border-blue-400 dark:border-blue-500 bg-blue-50 dark:bg-blue-950'
+                            : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'
                         }`}
                       >
                         <Text className="text-lg">{icon}</Text>

@@ -1,0 +1,35 @@
+appId: com.budgetbuddy.app
+name: "04 - Alternar tema (reproduz erro NavigationContainer)"
+---
+- launchApp:
+    stopApp: false
+
+- waitForAnimationToEnd
+
+- runFlow:
+    when:
+      visible: "Desbloquear Cofre"
+    commands:
+      - tapOn:
+          id: "vault-password-input"
+      - inputText: "${VAULT_PASSWORD}"
+      - tapOn: "Desbloquear"
+      - extendedWaitUntil:
+          visible: "Perfil"
+          timeout: 8000
+
+- tapOn: "Perfil"
+- assertVisible: "Aparência"
+
+# Toca em cada opção de tema
+- tapOn: "Escuro"
+- waitForAnimationToEnd
+- assertNotVisible: "Couldn't find a navigation context"
+
+- tapOn: "Claro"
+- waitForAnimationToEnd
+- assertNotVisible: "Couldn't find a navigation context"
+
+- tapOn: "Sistema"
+- waitForAnimationToEnd
+- assertNotVisible: "Couldn't find a navigation context"

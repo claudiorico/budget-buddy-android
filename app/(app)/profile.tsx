@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { useVault } from '@/contexts/VaultContext';
 import { useGeminiKey } from '@/hooks/useGeminiKey';
+import { useTheme, type ThemePreference } from '@/hooks/useTheme';
 import { parseExpenseFromText } from '@/lib/ai';
 
 // ── Ko-fi ─────────────────────────────────────────────────────────────────────
@@ -30,6 +31,9 @@ export default function ProfileScreen() {
   const { user, signOut } = useAuth();
   const { lockVault, regenerateRecoveryKey } = useVault();
   const { apiKey, hasKey, setApiKey, clearKey } = useGeminiKey();
+  const { preference: themePref, setPreference: setThemePref, scheme } = useTheme();
+  const isDark = scheme === 'dark';
+  const sheetBg = isDark ? '#111827' : 'white';
 
   // ── AI key modal ───────────────────────────────────────────────────────────
   const [aiModalVisible, setAiModalVisible] = useState(false);
@@ -191,27 +195,27 @@ export default function ProfileScreen() {
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <View className="flex-1 bg-gray-50" style={{ paddingTop: insets.top }}>
+    <View className="flex-1 bg-gray-50 dark:bg-gray-950" style={{ paddingTop: insets.top }}>
       <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}>
         {/* Header */}
         <View className="px-4 pt-3 pb-4">
-          <Text className="text-xl font-bold text-gray-900">Perfil</Text>
+          <Text className="text-xl font-bold text-gray-900 dark:text-gray-100">Perfil</Text>
         </View>
 
         {/* ── User card ──────────────────────────────────────────────────── */}
-        <View className="mx-4 mb-4 bg-white rounded-2xl p-5 shadow-sm flex-row items-center gap-4">
+        <View className="mx-4 mb-4 bg-white dark:bg-gray-900 rounded-2xl p-5 shadow-sm flex-row items-center gap-4">
           {user?.photo ? (
             <Image
               source={{ uri: user.photo }}
               className="w-16 h-16 rounded-full"
             />
           ) : (
-            <View className="w-16 h-16 rounded-full bg-blue-100 items-center justify-center">
+            <View className="w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-950 items-center justify-center">
               <Ionicons name="person" size={32} color="#2563EB" />
             </View>
           )}
           <View className="flex-1 min-w-0">
-            <Text className="text-base font-semibold text-gray-900" numberOfLines={1}>
+            <Text className="text-base font-semibold text-gray-900 dark:text-gray-100" numberOfLines={1}>
               {user?.name ?? 'Usuário'}
             </Text>
             <Text className="text-sm text-gray-500 mt-0.5" numberOfLines={1}>
@@ -219,15 +223,15 @@ export default function ProfileScreen() {
             </Text>
             <View className="flex-row items-center gap-1.5 mt-2">
               <View className="w-1.5 h-1.5 rounded-full bg-green-500" />
-              <Text className="text-xs text-green-600 font-medium">Cofre desbloqueado</Text>
+              <Text className="text-xs text-green-600 dark:text-green-400 font-medium">Cofre desbloqueado</Text>
             </View>
           </View>
         </View>
 
         {/* ── Security section ───────────────────────────────────────────── */}
-        <View className="mx-4 mb-4 bg-white rounded-2xl shadow-sm overflow-hidden">
+        <View className="mx-4 mb-4 bg-white dark:bg-gray-900 rounded-2xl shadow-sm overflow-hidden">
           <View className="px-4 pt-4 pb-2">
-            <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+            <Text className="text-xs font-semibold text-gray-400 dark:text-gray-600 uppercase tracking-wider">
               Segurança
             </Text>
           </View>
@@ -241,7 +245,7 @@ export default function ProfileScreen() {
             onPress={handleLock}
           />
 
-          <View className="mx-4 h-px bg-gray-100" />
+          <View className="mx-4 h-px bg-gray-100 dark:bg-gray-800" />
 
           {/* Regen recovery key */}
           <ActionRow
@@ -253,10 +257,75 @@ export default function ProfileScreen() {
           />
         </View>
 
-        {/* ── Account section ────────────────────────────────────────────── */}
-        <View className="mx-4 mb-4 bg-white rounded-2xl shadow-sm overflow-hidden">
+        {/* ── Appearance section ─────────────────────────────────────────── */}
+        <View className="mx-4 mb-4 bg-white dark:bg-gray-900 rounded-2xl shadow-sm overflow-hidden">
           <View className="px-4 pt-4 pb-2">
-            <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+            <Text className="text-xs font-semibold text-gray-400 dark:text-gray-600 uppercase tracking-wider">
+              Aparência
+            </Text>
+          </View>
+          <View className="px-4 pb-4">
+            {/* Inline styles instead of className to avoid CssInterop wrapper,
+                which threw "Couldn't find a navigation context" when the
+                colorScheme cascade re-rendered the touchables. */}
+            <View
+              style={{
+                flexDirection: 'row',
+                backgroundColor: isDark ? '#1F2937' : '#F3F4F6',
+                borderRadius: 12,
+                padding: 4,
+              }}
+            >
+              {(['system', 'light', 'dark'] as ThemePreference[]).map(opt => {
+                const active = themePref === opt;
+                const label = opt === 'system' ? 'Sistema' : opt === 'light' ? 'Claro' : 'Escuro';
+                const icon = opt === 'system' ? 'phone-portrait-outline'
+                  : opt === 'light' ? 'sunny-outline' : 'moon-outline';
+                return (
+                  <TouchableOpacity
+                    key={opt}
+                    onPress={() => setThemePref(opt)}
+                    activeOpacity={0.75}
+                    style={{
+                      flex: 1,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 6,
+                      paddingVertical: 8,
+                      borderRadius: 8,
+                      backgroundColor: active
+                        ? (isDark ? '#374151' : '#FFFFFF')
+                        : 'transparent',
+                    }}
+                  >
+                    <Ionicons
+                      name={icon as any}
+                      size={14}
+                      color={active ? '#2563EB' : '#9CA3AF'}
+                    />
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        fontWeight: '500',
+                        color: active
+                          ? (isDark ? '#60A5FA' : '#2563EB')
+                          : '#6B7280',
+                      }}
+                    >
+                      {label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        </View>
+
+        {/* ── Account section ────────────────────────────────────────────── */}
+        <View className="mx-4 mb-4 bg-white dark:bg-gray-900 rounded-2xl shadow-sm overflow-hidden">
+          <View className="px-4 pt-4 pb-2">
+            <Text className="text-xs font-semibold text-gray-400 dark:text-gray-600 uppercase tracking-wider">
               Conta
             </Text>
           </View>
@@ -272,9 +341,9 @@ export default function ProfileScreen() {
         </View>
 
         {/* ── AI section ─────────────────────────────────────────────────── */}
-        <View className="mx-4 mb-4 bg-white rounded-2xl shadow-sm overflow-hidden">
+        <View className="mx-4 mb-4 bg-white dark:bg-gray-900 rounded-2xl shadow-sm overflow-hidden">
           <View className="px-4 pt-4 pb-2">
-            <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+            <Text className="text-xs font-semibold text-gray-400 dark:text-gray-600 uppercase tracking-wider">
               IA
             </Text>
           </View>
@@ -288,9 +357,9 @@ export default function ProfileScreen() {
         </View>
 
         {/* ── About section ──────────────────────────────────────────────── */}
-        <View className="mx-4 mb-4 bg-white rounded-2xl p-4 shadow-sm">
+        <View className="mx-4 mb-4 bg-white dark:bg-gray-900 rounded-2xl p-4 shadow-sm">
           <View className="px-0 pb-2">
-            <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+            <Text className="text-xs font-semibold text-gray-400 dark:text-gray-600 uppercase tracking-wider">
               Sobre
             </Text>
           </View>
@@ -324,7 +393,7 @@ export default function ProfileScreen() {
           </View>
         </TouchableOpacity>
 
-        <Text className="text-center text-xs text-gray-300 mt-4 px-8">
+        <Text className="text-center text-xs text-gray-300 dark:text-gray-700 mt-4 px-8">
           Budget Buddy · Seus dados ficam apenas no seu Google Drive.{'\n'}
           Nenhum servidor. Zero custódia.
         </Text>
@@ -345,21 +414,21 @@ export default function ProfileScreen() {
           <Animated.View
             style={{
               transform: [{ translateY: aiSlideAnim }],
-              backgroundColor: 'white',
+              backgroundColor: sheetBg,
               borderTopLeftRadius: 24,
               borderTopRightRadius: 24,
             }}
           >
             <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
               <View className="items-center pt-3 pb-1">
-                <View className="w-10 h-1 bg-gray-200 rounded-full" />
+                <View className="w-10 h-1 bg-gray-200 dark:bg-gray-700 rounded-full" />
               </View>
               <View
                 className="px-5"
                 style={{ paddingBottom: Math.max(insets.bottom + 8, 24) }}
               >
                 <View className="flex-row items-center justify-between mb-1">
-                  <Text className="text-base font-semibold text-gray-900">
+                  <Text className="text-base font-semibold text-gray-900 dark:text-gray-100">
                     Configurar API Gemini
                   </Text>
                   <TouchableOpacity onPress={closeAiModal}>
@@ -375,7 +444,7 @@ export default function ProfileScreen() {
                   className="flex-row items-center gap-1.5 mb-3"
                 >
                   <Ionicons name="open-outline" size={14} color="#2563EB" />
-                  <Text className="text-xs text-blue-600 font-medium">
+                  <Text className="text-xs text-blue-600 dark:text-blue-400 font-medium">
                     Obter chave grátis no Google AI Studio
                   </Text>
                 </TouchableOpacity>
@@ -383,9 +452,9 @@ export default function ProfileScreen() {
                 <Text className="text-xs font-medium text-gray-500 mb-1.5">
                   API key
                 </Text>
-                <View className="bg-gray-100 rounded-xl flex-row items-center px-4 mb-3">
+                <View className="bg-gray-100 dark:bg-gray-800 rounded-xl flex-row items-center px-4 mb-3">
                   <TextInput
-                    className="flex-1 py-3 text-sm text-gray-800"
+                    className="flex-1 py-3 text-sm text-gray-800 dark:text-gray-200"
                     value={aiKeyInput}
                     onChangeText={text => {
                       setAiKeyInput(text);
@@ -408,17 +477,17 @@ export default function ProfileScreen() {
 
                 {aiTestState !== 'idle' && (
                   <View className={`rounded-xl px-3 py-2.5 mb-3 flex-row items-center gap-2 ${
-                    aiTestState === 'ok' ? 'bg-green-50 border border-green-200'
-                      : aiTestState === 'error' ? 'bg-red-50 border border-red-200'
-                      : 'bg-gray-50 border border-gray-200'
+                    aiTestState === 'ok' ? 'bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800'
+                      : aiTestState === 'error' ? 'bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800'
+                      : 'bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700'
                   }`}>
                     {aiTestState === 'testing' && <ActivityIndicator size="small" color="#6B7280" />}
                     {aiTestState === 'ok' && <Ionicons name="checkmark-circle" size={16} color="#10B981" />}
                     {aiTestState === 'error' && <Ionicons name="close-circle" size={16} color="#EF4444" />}
                     <Text className={`text-xs flex-1 ${
-                      aiTestState === 'ok' ? 'text-green-700'
-                        : aiTestState === 'error' ? 'text-red-700'
-                        : 'text-gray-600'
+                      aiTestState === 'ok' ? 'text-green-700 dark:text-green-300'
+                        : aiTestState === 'error' ? 'text-red-700 dark:text-red-300'
+                        : 'text-gray-600 dark:text-gray-400'
                     }`}>
                       {aiTestState === 'testing' ? 'Testando…' : aiTestMessage}
                     </Text>
@@ -429,10 +498,10 @@ export default function ProfileScreen() {
                   <TouchableOpacity
                     onPress={handleAiTest}
                     disabled={aiTestState === 'testing'}
-                    className="flex-1 bg-gray-100 rounded-xl py-3 items-center"
+                    className="flex-1 bg-gray-100 dark:bg-gray-800 rounded-xl py-3 items-center"
                     activeOpacity={0.85}
                   >
-                    <Text className="text-gray-700 font-semibold text-sm">Testar</Text>
+                    <Text className="text-gray-700 dark:text-gray-300 font-semibold text-sm">Testar</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={handleAiSave}
@@ -475,7 +544,7 @@ export default function ProfileScreen() {
           <Animated.View
             style={{
               transform: [{ translateY: slideAnim }],
-              backgroundColor: 'white',
+              backgroundColor: sheetBg,
               borderTopLeftRadius: 24,
               borderTopRightRadius: 24,
             }}
@@ -483,7 +552,7 @@ export default function ProfileScreen() {
             <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
               {/* Handle */}
               <View className="items-center pt-3 pb-1">
-                <View className="w-10 h-1 bg-gray-200 rounded-full" />
+                <View className="w-10 h-1 bg-gray-200 dark:bg-gray-700 rounded-full" />
               </View>
 
               <View
@@ -494,7 +563,7 @@ export default function ProfileScreen() {
                 {regenStep === 'password' && (
                   <>
                     <View className="flex-row items-center justify-between mb-1">
-                      <Text className="text-base font-semibold text-gray-900">
+                      <Text className="text-base font-semibold text-gray-900 dark:text-gray-100">
                         Regenerar chave de recuperação
                       </Text>
                       <TouchableOpacity onPress={closeModal}>
@@ -509,9 +578,9 @@ export default function ProfileScreen() {
                     <Text className="text-xs font-medium text-gray-500 mb-1.5">
                       Senha atual
                     </Text>
-                    <View className="bg-gray-100 rounded-xl flex-row items-center px-4 mb-1">
+                    <View className="bg-gray-100 dark:bg-gray-800 rounded-xl flex-row items-center px-4 mb-1">
                       <TextInput
-                        className="flex-1 py-3 text-sm text-gray-800"
+                        className="flex-1 py-3 text-sm text-gray-800 dark:text-gray-200"
                         value={password}
                         onChangeText={text => {
                           setPassword(text);
@@ -557,10 +626,10 @@ export default function ProfileScreen() {
                 {regenStep === 'mnemonic' && (
                   <>
                     <View className="flex-row items-center gap-2 mb-1">
-                      <View className="w-6 h-6 rounded-full bg-green-100 items-center justify-center">
+                      <View className="w-6 h-6 rounded-full bg-green-100 dark:bg-green-950 items-center justify-center">
                         <Ionicons name="checkmark" size={14} color="#10B981" />
                       </View>
-                      <Text className="text-base font-semibold text-gray-900">
+                      <Text className="text-base font-semibold text-gray-900 dark:text-gray-100">
                         Nova chave gerada!
                       </Text>
                     </View>
@@ -570,17 +639,17 @@ export default function ProfileScreen() {
                     </Text>
 
                     {/* Mnemonic grid */}
-                    <View className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-4">
+                    <View className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-2xl p-4 mb-4">
                       <View className="flex-row flex-wrap gap-2">
                         {newMnemonic.split(' ').map((word, i) => (
                           <View
                             key={i}
-                            className="flex-row items-center gap-1 bg-white border border-amber-200 rounded-lg px-2.5 py-1.5"
+                            className="flex-row items-center gap-1 bg-white dark:bg-gray-900 border border-amber-200 dark:border-amber-800 rounded-lg px-2.5 py-1.5"
                           >
                             <Text className="text-xs text-amber-400 font-medium w-4 text-right">
                               {i + 1}.
                             </Text>
-                            <Text className="text-xs font-mono font-semibold text-gray-800">
+                            <Text className="text-xs font-mono font-semibold text-gray-800 dark:text-gray-200">
                               {word}
                             </Text>
                           </View>
@@ -592,7 +661,7 @@ export default function ProfileScreen() {
                     <TouchableOpacity
                       onPress={handleCopyMnemonic}
                       className={`flex-row items-center justify-center gap-2 rounded-xl py-3 mb-3 ${
-                        copied ? 'bg-green-100' : 'bg-gray-100'
+                        copied ? 'bg-green-100 dark:bg-green-950' : 'bg-gray-100 dark:bg-gray-800'
                       }`}
                     >
                       <Ionicons
@@ -602,7 +671,7 @@ export default function ProfileScreen() {
                       />
                       <Text
                         className={`text-sm font-medium ${
-                          copied ? 'text-green-700' : 'text-gray-600'
+                          copied ? 'text-green-700 dark:text-green-300' : 'text-gray-600 dark:text-gray-400'
                         }`}
                       >
                         {copied ? 'Copiado!' : 'Copiar frase'}
@@ -654,12 +723,12 @@ function ActionRow({
       <View className="flex-1">
         <Text
           className={`text-sm font-medium ${
-            destructive ? 'text-red-600' : 'text-gray-800'
+            destructive ? 'text-red-600 dark:text-red-400' : 'text-gray-800 dark:text-gray-200'
           }`}
         >
           {label}
         </Text>
-        <Text className="text-xs text-gray-400 mt-0.5">{subtitle}</Text>
+        <Text className="text-xs text-gray-400 dark:text-gray-600 mt-0.5">{subtitle}</Text>
       </View>
       <Ionicons name="chevron-forward" size={16} color="#D1D5DB" />
     </TouchableOpacity>
@@ -670,7 +739,7 @@ function Row({ label, value }: { label: string; value: string }) {
   return (
     <View className="flex-row items-center justify-between py-1">
       <Text className="text-xs text-gray-500">{label}</Text>
-      <Text className="text-xs font-medium text-gray-700">{value}</Text>
+      <Text className="text-xs font-medium text-gray-700 dark:text-gray-300">{value}</Text>
     </View>
   );
 }

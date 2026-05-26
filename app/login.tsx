@@ -12,13 +12,13 @@ export default function LoginScreen() {
   }, [user]);
 
   return (
-    <View className="flex-1 bg-white justify-between px-8 py-16">
+    <View className="flex-1 bg-white dark:bg-gray-900 justify-between px-8 py-16">
       {/* Header */}
       <View className="items-center mt-12">
         <View className="w-20 h-20 rounded-2xl bg-blue-600 items-center justify-center mb-6">
           <Text className="text-white text-4xl">💰</Text>
         </View>
-        <Text className="text-3xl font-bold text-gray-900 tracking-tight">
+        <Text className="text-3xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">
           Gestão Financeira
         </Text>
         <Text className="text-base text-gray-500 mt-2 text-center leading-relaxed">
@@ -35,7 +35,7 @@ export default function LoginScreen() {
         ].map(({ icon, text }) => (
           <View key={text} className="flex-row items-center gap-3">
             <Text className="text-2xl">{icon}</Text>
-            <Text className="text-sm text-gray-600 flex-1">{text}</Text>
+            <Text className="text-sm text-gray-600 dark:text-gray-400 flex-1">{text}</Text>
           </View>
         ))}
       </View>
@@ -59,7 +59,7 @@ export default function LoginScreen() {
             </>
           )}
         </TouchableOpacity>
-        <Text className="text-xs text-gray-400 text-center">
+        <Text className="text-xs text-gray-400 dark:text-gray-600 text-center">
           Apenas as permissões de perfil e Google Drive (appdata) são solicitadas.
         </Text>
       </View>

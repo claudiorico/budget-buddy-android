@@ -27,7 +27,7 @@ export default function Index() {
   // 1. Wait for Google silent sign-in to finish
   if (restoring) {
     return (
-      <View className="flex-1 items-center justify-center bg-white">
+      <View className="flex-1 items-center justify-center bg-white dark:bg-gray-900">
         <ActivityIndicator size="large" color="#2563EB" />
       </View>
     );
@@ -39,7 +39,7 @@ export default function Index() {
   // 3. User exists → wait for vault check against Drive
   if (status === 'loading') {
     return (
-      <View className="flex-1 items-center justify-center bg-white">
+      <View className="flex-1 items-center justify-center bg-white dark:bg-gray-900">
         <ActivityIndicator size="large" color="#2563EB" />
       </View>
     );

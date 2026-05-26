@@ -73,7 +73,7 @@ export default function VaultSetupScreen() {
       {[1, 2, 3].map(n => (
         <View
           key={n}
-          className={`h-2 w-8 rounded-full ${step >= n ? 'bg-blue-600' : 'bg-gray-200'}`}
+          className={`h-2 w-8 rounded-full ${step >= n ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}
         />
       ))}
     </View>
@@ -83,14 +83,14 @@ export default function VaultSetupScreen() {
 
   return (
     <ScrollView
-      className="flex-1 bg-white"
+      className="flex-1 bg-white dark:bg-gray-900"
       contentContainerClassName="flex-grow justify-center px-6 py-12"
       keyboardShouldPersistTaps="handled"
     >
       {/* Header */}
       <View className="items-center mb-8">
         <Text className="text-4xl mb-3">🛡️</Text>
-        <Text className="text-2xl font-bold text-gray-900">Configurar Cofre</Text>
+        <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100">Configurar Cofre</Text>
         <Text className="text-sm text-gray-500 mt-1 text-center leading-relaxed">
           Seus dados serão criptografados localmente{'\n'}antes de ir para o Drive.
         </Text>
@@ -103,10 +103,10 @@ export default function VaultSetupScreen() {
       {step === STEP.PASSWORD && (
         <View className="gap-4">
           <View className="gap-1.5">
-            <Text className="text-sm font-medium text-gray-700">Senha do cofre</Text>
-            <View className="flex-row items-center border border-gray-300 rounded-xl px-4 bg-gray-50">
+            <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">Senha do cofre</Text>
+            <View className="flex-row items-center border border-gray-300 dark:border-gray-600 rounded-xl px-4 bg-gray-50 dark:bg-gray-800">
               <TextInput
-                className="flex-1 py-3.5 text-base text-gray-900"
+                className="flex-1 py-3.5 text-base text-gray-900 dark:text-gray-100"
                 placeholder="Mínimo 8 caracteres"
                 placeholderTextColor="#9CA3AF"
                 secureTextEntry={!showPassword}
@@ -115,16 +115,16 @@ export default function VaultSetupScreen() {
                 autoFocus
               />
               <TouchableOpacity onPress={() => setShowPassword(v => !v)}>
-                <Text className="text-gray-400 text-sm">{showPassword ? 'Ocultar' : 'Ver'}</Text>
+                <Text className="text-gray-400 dark:text-gray-500 text-sm">{showPassword ? 'Ocultar' : 'Ver'}</Text>
               </TouchableOpacity>
             </View>
           </View>
 
           <View className="gap-1.5">
-            <Text className="text-sm font-medium text-gray-700">Confirmar senha</Text>
-            <View className="flex-row items-center border border-gray-300 rounded-xl px-4 bg-gray-50">
+            <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">Confirmar senha</Text>
+            <View className="flex-row items-center border border-gray-300 dark:border-gray-600 rounded-xl px-4 bg-gray-50 dark:bg-gray-800">
               <TextInput
-                className="flex-1 py-3.5 text-base text-gray-900"
+                className="flex-1 py-3.5 text-base text-gray-900 dark:text-gray-100"
                 placeholder="Repita a senha"
                 placeholderTextColor="#9CA3AF"
                 secureTextEntry={!showConfirm}
@@ -132,14 +132,14 @@ export default function VaultSetupScreen() {
                 onChangeText={setConfirmPassword}
               />
               <TouchableOpacity onPress={() => setShowConfirm(v => !v)}>
-                <Text className="text-gray-400 text-sm">{showConfirm ? 'Ocultar' : 'Ver'}</Text>
+                <Text className="text-gray-400 dark:text-gray-500 text-sm">{showConfirm ? 'Ocultar' : 'Ver'}</Text>
               </TouchableOpacity>
             </View>
           </View>
 
           {error ? <Text className="text-sm text-red-500">{error}</Text> : null}
 
-          <Text className="text-xs text-gray-400 leading-relaxed">
+          <Text className="text-xs text-gray-400 dark:text-gray-600 leading-relaxed">
             Esta senha é diferente da sua conta Google. Ela protege seus dados financeiros
             e não pode ser recuperada por ninguém além de você.
           </Text>
@@ -163,11 +163,11 @@ export default function VaultSetupScreen() {
 
       {step === STEP.MNEMONIC && (
         <View className="gap-4">
-          <View className="bg-amber-50 border border-amber-200 rounded-2xl p-4 gap-3">
-            <Text className="text-sm font-semibold text-amber-800">
+          <View className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-2xl p-4 gap-3">
+            <Text className="text-sm font-semibold text-amber-800 dark:text-amber-200">
               ⚠️  Chave de recuperação — guarde em local seguro
             </Text>
-            <Text className="text-xs text-amber-700 leading-relaxed">
+            <Text className="text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
               Se esquecer sua senha, estas 12 palavras são a única forma de recuperar
               seus dados. Ninguém mais tem acesso a elas.
             </Text>
@@ -177,10 +177,10 @@ export default function VaultSetupScreen() {
           <TouchableOpacity
             onPress={handleCopy}
             activeOpacity={0.8}
-            className="border border-gray-300 rounded-xl py-3.5 flex-row items-center justify-center gap-2"
+            className="border border-gray-300 dark:border-gray-600 rounded-xl py-3.5 flex-row items-center justify-center gap-2"
           >
             <Text className="text-base">{copied ? '✅' : '📋'}</Text>
-            <Text className="text-gray-700 font-medium">
+            <Text className="text-gray-700 dark:text-gray-300 font-medium">
               {copied ? 'Copiado!' : 'Copiar palavras'}
             </Text>
           </TouchableOpacity>
@@ -204,16 +204,16 @@ export default function VaultSetupScreen() {
           <TouchableOpacity
             onPress={() => setConfirmed(v => !v)}
             activeOpacity={0.8}
-            className="border border-gray-200 rounded-2xl p-4 flex-row items-start gap-3 bg-gray-50"
+            className="border border-gray-200 dark:border-gray-700 rounded-2xl p-4 flex-row items-start gap-3 bg-gray-50 dark:bg-gray-800"
           >
             <View
               className={`w-5 h-5 rounded border-2 mt-0.5 items-center justify-center flex-shrink-0 ${
-                confirmed ? 'bg-blue-600 border-blue-600' : 'border-gray-400'
+                confirmed ? 'bg-blue-600 border-blue-600' : 'border-gray-400 dark:border-gray-500'
               }`}
             >
               {confirmed && <Text className="text-white text-xs font-bold">✓</Text>}
             </View>
-            <Text className="text-sm text-gray-700 flex-1 leading-relaxed">
+            <Text className="text-sm text-gray-700 dark:text-gray-300 flex-1 leading-relaxed">
               Confirmo que salvei as 12 palavras em local seguro e entendo que sem elas
               não será possível recuperar meus dados caso esqueça a senha do cofre.
             </Text>
@@ -224,12 +224,12 @@ export default function VaultSetupScreen() {
             disabled={!confirmed}
             activeOpacity={0.85}
             className={`rounded-xl py-4 flex-row items-center justify-center gap-2 ${
-              confirmed ? 'bg-blue-600' : 'bg-gray-200'
+              confirmed ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'
             }`}
           >
             <Text className="text-2xl">🔐</Text>
             <Text
-              className={`font-semibold text-base ${confirmed ? 'text-white' : 'text-gray-400'}`}
+              className={`font-semibold text-base ${confirmed ? 'text-white' : 'text-gray-400 dark:text-gray-500'}`}
             >
               Entrar no app
             </Text>

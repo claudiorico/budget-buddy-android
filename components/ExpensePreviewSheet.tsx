@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useColorScheme } from 'nativewind';
 import type { Category, Expense } from '@/contexts/DataContext';
 
 export type PreviewMode = 'add' | 'edit';
@@ -48,6 +49,9 @@ export function ExpensePreviewSheet({
   onCancel, onBack, onSave,
 }: Props) {
   const insets = useSafeAreaInsets();
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const sheetBg = isDark ? '#111827' : 'white';
 
   const slideAnim = useRef(new Animated.Value(500)).current;
   const kbOffset = useRef(new Animated.Value(0)).current;
@@ -165,13 +169,13 @@ export function ExpensePreviewSheet({
         <Animated.View
           style={{
             transform: [{ translateY: sheetTranslateY }],
-            backgroundColor: 'white',
+            backgroundColor: sheetBg,
             borderTopLeftRadius: 24,
             borderTopRightRadius: 24,
           }}
         >
           <View className="items-center pt-3 pb-1">
-            <View className="w-10 h-1 bg-gray-200 rounded-full" />
+            <View className="w-10 h-1 bg-gray-200 dark:bg-gray-700 rounded-full" />
           </View>
 
           <View className="flex-row items-center justify-between px-5 mb-2">
@@ -181,7 +185,7 @@ export function ExpensePreviewSheet({
                   <Ionicons name="chevron-back" size={22} color="#6B7280" />
                 </TouchableOpacity>
               )}
-              <Text className="text-base font-semibold text-gray-900">
+              <Text className="text-base font-semibold text-gray-900 dark:text-gray-100">
                 {mode === 'add' ? 'Revisar gasto' : 'Editar categoria'}
               </Text>
             </View>
@@ -200,9 +204,9 @@ export function ExpensePreviewSheet({
             }}
           >
             {showConfidenceBanner && (
-              <View className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 mb-3 mt-2 flex-row items-center gap-2">
+              <View className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-xl px-3 py-2.5 mb-3 mt-2 flex-row items-center gap-2">
                 <Ionicons name="alert-circle-outline" size={16} color="#D97706" />
-                <Text className="text-xs text-amber-700 flex-1">
+                <Text className="text-xs text-amber-700 dark:text-amber-300 flex-1">
                   Confira os campos antes de salvar — a IA pode ter chutado algum.
                 </Text>
               </View>
@@ -213,7 +217,7 @@ export function ExpensePreviewSheet({
                 <Text className="text-xs font-medium text-gray-500 mb-1.5 mt-2">Descrição</Text>
                 <TextInput
                   ref={descriptionRef}
-                  className="bg-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 mb-3"
+                  className="bg-gray-100 dark:bg-gray-800 rounded-xl px-4 py-3 text-sm text-gray-800 dark:text-gray-200 mb-3"
                   value={description}
                   onChangeText={setDescription}
                   placeholder="Ex: Almoço, Uber, Farmácia..."
@@ -228,7 +232,7 @@ export function ExpensePreviewSheet({
                     <Text className="text-xs font-medium text-gray-500 mb-1.5">Valor BRL</Text>
                     <TextInput
                       testID="input-value-brl"
-                      className="bg-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800"
+                      className="bg-gray-100 dark:bg-gray-800 rounded-xl px-4 py-3 text-sm text-gray-800 dark:text-gray-200"
                       value={valueBrl}
                       onChangeText={setValueBrl}
                       placeholder="0,00"
@@ -238,10 +242,10 @@ export function ExpensePreviewSheet({
                   </View>
                   <View className="flex-1">
                     <Text className="text-xs font-medium text-gray-500 mb-1.5">
-                      Valor USD <Text className="text-gray-400">(opcional)</Text>
+                      Valor USD <Text className="text-gray-400 dark:text-gray-600">(opcional)</Text>
                     </Text>
                     <TextInput
-                      className="bg-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800"
+                      className="bg-gray-100 dark:bg-gray-800 rounded-xl px-4 py-3 text-sm text-gray-800 dark:text-gray-200"
                       value={valueUsd}
                       onChangeText={setValueUsd}
                       placeholder="0.00"
@@ -255,7 +259,7 @@ export function ExpensePreviewSheet({
                   Data (AAAA-MM-DD)
                 </Text>
                 <TextInput
-                  className="bg-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 mb-3"
+                  className="bg-gray-100 dark:bg-gray-800 rounded-xl px-4 py-3 text-sm text-gray-800 dark:text-gray-200 mb-3"
                   value={date}
                   onChangeText={setDate}
                   placeholder="2025-01-15"
@@ -268,11 +272,11 @@ export function ExpensePreviewSheet({
             )}
 
             {mode === 'edit' && editTarget && (
-              <View className="bg-gray-50 rounded-xl px-4 py-3 mb-4 mt-2">
-                <Text className="text-sm font-medium text-gray-700" numberOfLines={1}>
+              <View className="bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3 mb-4 mt-2">
+                <Text className="text-sm font-medium text-gray-700 dark:text-gray-300" numberOfLines={1}>
                   {editTarget.description ?? '—'}
                 </Text>
-                <Text className="text-xs text-gray-400 mt-0.5">
+                <Text className="text-xs text-gray-400 dark:text-gray-600 mt-0.5">
                   {fmtDate(editTarget.date)}  ·  {fmtBrl(editTarget.value_brl ?? 0)}
                 </Text>
               </View>
@@ -290,12 +294,12 @@ export function ExpensePreviewSheet({
                 onPress={() => setCategoryId(null)}
                 className={`px-3 py-2 rounded-xl border ${
                   categoryId === null
-                    ? 'bg-gray-800 border-gray-800'
-                    : 'bg-white border-gray-200'
+                    ? 'bg-gray-800 dark:bg-gray-200 border-gray-800 dark:border-gray-200'
+                    : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
                 }`}
               >
                 <Text className={`text-xs font-medium ${
-                  categoryId === null ? 'text-white' : 'text-gray-600'
+                  categoryId === null ? 'text-white dark:text-gray-900' : 'text-gray-600 dark:text-gray-400'
                 }`}>
                   Sem cat.
                 </Text>
@@ -303,17 +307,20 @@ export function ExpensePreviewSheet({
 
               {categories.map(c => {
                 const active = categoryId === c.category_id;
+                const inactiveBg = isDark ? '#1F2937' : 'white';
+                const inactiveBorder = isDark ? '#374151' : '#E5E7EB';
+                const inactiveText = isDark ? '#9CA3AF' : '#4B5563';
                 return (
                   <TouchableOpacity
                     key={c.category_id}
                     onPress={() => setCategoryId(c.category_id)}
                     style={active
                       ? { backgroundColor: c.color + '22', borderColor: c.color, borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 6 }
-                      : { backgroundColor: 'white', borderColor: '#E5E7EB', borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 6 }
+                      : { backgroundColor: inactiveBg, borderColor: inactiveBorder, borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 6 }
                     }
                   >
                     <Text className="text-xs">{c.icon}</Text>
-                    <Text className="text-xs font-medium" style={{ color: active ? c.color : '#4B5563' }}>
+                    <Text className="text-xs font-medium" style={{ color: active ? c.color : inactiveText }}>
                       {c.name}
                     </Text>
                   </TouchableOpacity>

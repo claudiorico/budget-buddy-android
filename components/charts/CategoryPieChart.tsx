@@ -20,7 +20,7 @@ export function CategoryPieChart({ data, height = 180 }: Props) {
   if (!data.length) {
     return (
       <View className="items-center justify-center py-10">
-        <Text className="text-gray-400 text-sm">Nenhum gasto no período</Text>
+        <Text className="text-gray-400 dark:text-gray-600 text-sm">Nenhum gasto no período</Text>
       </View>
     );
   }
@@ -50,17 +50,17 @@ export function CategoryPieChart({ data, height = 180 }: Props) {
                 className="w-2.5 h-2.5 rounded-full"
                 style={{ backgroundColor: d.color }}
               />
-              <Text className="text-xs text-gray-600 flex-1" numberOfLines={1}>
+              <Text className="text-xs text-gray-600 dark:text-gray-400 flex-1" numberOfLines={1}>
                 {d.name}
               </Text>
             </View>
-            <Text className="text-xs font-mono text-gray-700 ml-2">
+            <Text className="text-xs font-mono text-gray-700 dark:text-gray-300 ml-2">
               {fmtBrl(d.total_brl)}
             </Text>
           </View>
         ))}
         {data.length > 5 && (
-          <Text className="text-xs text-gray-400 mt-0.5">
+          <Text className="text-xs text-gray-400 dark:text-gray-600 mt-0.5">
             + {data.length - 5} outras categorias
           </Text>
         )}
