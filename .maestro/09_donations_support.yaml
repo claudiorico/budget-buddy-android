@@ -1,5 +1,5 @@
 appId: com.budgetbuddy.app
-name: "09 - Doações (PIX/BTC) e Suporte abrem"
+name: "09 - Doações (PIX/BTC) e Suporte"
 ---
 - launchApp:
     stopApp: false
@@ -19,27 +19,44 @@ name: "09 - Doações (PIX/BTC) e Suporte abrem"
           timeout: 15000
 
 - tapOn: "Perfil"
-- assertVisible: "Sobre"
+- assertVisible: "Aparência"
 
-# Suporte: abre modal, asserta campos + fecha
-- assertVisible: "Contato e suporte"
+# ── Suporte: abre modal, valida tipos fixos, fecha
+- scrollUntilVisible:
+    element:
+      text: "Contato e suporte"
 - tapOn: "Contato e suporte"
+
 - extendedWaitUntil:
     visible: "Contato e suporte"
     timeout: 3000
-- assertVisible: "Assunto"
+
+- assertVisible: "Erro"
+- assertVisible: "Sugestão"
+- assertVisible: "Elogio"
 - assertVisible: "Mensagem"
 - assertVisible: "Enviar email"
+
+# Seleciona "Sugestão" — confirma que o seletor responde
+- tapOn: "Sugestão"
+- waitForAnimationToEnd
+
+# Fecha modal tocando no overlay (área transparente acima)
 - tapOn:
     point: "50%,5%"
 - waitForAnimationToEnd
 
-# Apoiar: abre modal, asserta tabs e botão copiar
+# ── Apoiar: abre modal, valida tabs PIX/Bitcoin + copiar
+- scrollUntilVisible:
+    element:
+      id: "donation-card"
 - tapOn:
     id: "donation-card"
+
 - extendedWaitUntil:
     visible: "Apoie o desenvolvedor"
     timeout: 3000
+
 - assertVisible: "PIX"
 - assertVisible: "Bitcoin"
 - assertVisible: "Copiar chave PIX"
