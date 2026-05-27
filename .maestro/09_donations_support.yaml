@@ -1,0 +1,54 @@
+appId: com.budgetbuddy.app
+name: "09 - Doações (PIX/BTC) e Suporte abrem"
+---
+- launchApp:
+    stopApp: false
+
+- waitForAnimationToEnd
+
+- runFlow:
+    when:
+      visible: "Desbloquear Cofre"
+    commands:
+      - tapOn:
+          id: "vault-password-input"
+      - inputText: "${VAULT_PASSWORD}"
+      - tapOn: "Desbloquear"
+      - extendedWaitUntil:
+          visible: "Perfil"
+          timeout: 15000
+
+- tapOn: "Perfil"
+- assertVisible: "Sobre"
+
+# Suporte: abre modal, asserta campos + fecha
+- assertVisible: "Contato e suporte"
+- tapOn: "Contato e suporte"
+- extendedWaitUntil:
+    visible: "Contato e suporte"
+    timeout: 3000
+- assertVisible: "Assunto"
+- assertVisible: "Mensagem"
+- assertVisible: "Enviar email"
+- tapOn:
+    point: "50%,5%"
+- waitForAnimationToEnd
+
+# Apoiar: abre modal, asserta tabs e botão copiar
+- tapOn:
+    id: "donation-card"
+- extendedWaitUntil:
+    visible: "Apoie o desenvolvedor"
+    timeout: 3000
+- assertVisible: "PIX"
+- assertVisible: "Bitcoin"
+- assertVisible: "Copiar chave PIX"
+
+# Troca pra tab Bitcoin
+- tapOn: "Bitcoin"
+- waitForAnimationToEnd
+- assertVisible: "Copiar endereço"
+
+# Sem crashes
+- assertNotVisible: "Couldn't find a navigation context"
+- assertNotVisible: "Something went wrong"

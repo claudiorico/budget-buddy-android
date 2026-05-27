@@ -14,10 +14,9 @@ import { useGeminiKey } from '@/hooks/useGeminiKey';
 import { useTheme, type ThemePreference } from '@/hooks/useTheme';
 import { useBiometricVault } from '@/hooks/useBiometricVault';
 import { parseExpenseFromText } from '@/lib/ai';
+import { DonationSheet } from '@/components/DonationSheet';
+import { SupportSheet } from '@/components/SupportSheet';
 
-// ── Ko-fi ─────────────────────────────────────────────────────────────────────
-
-const KOFI_URL = 'https://ko-fi.com/budgetbuddyapp';
 const GEMINI_KEY_URL = 'https://aistudio.google.com/apikey';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -36,6 +35,10 @@ export default function ProfileScreen() {
   const isDark = scheme === 'dark';
   const sheetBg = isDark ? '#111827' : 'white';
   const bio = useBiometricVault();
+
+  // ── Donation / Support modals ─────────────────────────────────────────────
+  const [donationVisible, setDonationVisible] = useState(false);
+  const [supportVisible, setSupportVisible] = useState(false);
 
   // ── Biometric enable modal ────────────────────────────────────────────────
   const [bioModalVisible, setBioModalVisible] = useState(false);
@@ -209,10 +212,6 @@ export default function ProfileScreen() {
     lockVault();
   }, [lockVault]);
 
-  // ── Ko-fi ──────────────────────────────────────────────────────────────────
-  const handleKofi = useCallback(() => {
-    Linking.openURL(KOFI_URL);
-  }, []);
 
   // ── AI key modal ───────────────────────────────────────────────────────────
   const openAiModal = useCallback(() => {
@@ -540,23 +539,40 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* ── Ko-fi card ─────────────────────────────────────────────────── */}
+        {/* ── Suporte ───────────────────────────────────────────────────── */}
+        <View className="mx-4 mb-4 bg-white dark:bg-gray-900 rounded-2xl shadow-sm overflow-hidden">
+          <View className="px-4 pt-4 pb-2">
+            <Text className="text-xs font-semibold text-gray-400 dark:text-gray-600 uppercase tracking-wider">
+              Suporte
+            </Text>
+          </View>
+          <ActionRow
+            icon="mail-outline"
+            iconColor="#2563EB"
+            label="Contato e suporte"
+            subtitle="Reportar bug ou enviar sugestão"
+            onPress={() => setSupportVisible(true)}
+          />
+        </View>
+
+        {/* ── Apoiar card ────────────────────────────────────────────────── */}
         <TouchableOpacity
-          onPress={handleKofi}
+          testID="donation-card"
+          onPress={() => setDonationVisible(true)}
           activeOpacity={0.85}
           className="mx-4 mb-2"
         >
           <View
             className="rounded-2xl p-5 flex-row items-center gap-4"
-            style={{ backgroundColor: '#FF5E5B' }}
+            style={{ backgroundColor: '#10B981' }}
           >
             <View className="w-12 h-12 bg-white/20 rounded-full items-center justify-center">
-              <Text className="text-2xl">☕</Text>
+              <Text className="text-2xl">💚</Text>
             </View>
             <View className="flex-1">
-              <Text className="text-white font-bold text-base">Apoiar no Ko-fi</Text>
+              <Text className="text-white font-bold text-base">Apoie o desenvolvedor</Text>
               <Text className="text-white/80 text-xs mt-0.5">
-                Se o app te ajuda, considere contribuir!
+                PIX ou Bitcoin · App grátis e sem anúncios
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.7)" />
@@ -951,6 +967,18 @@ export default function ProfileScreen() {
           </Animated.View>
         </View>
       </Modal>
+
+      {/* ── Donation Sheet ─────────────────────────────────────────────────── */}
+      <DonationSheet
+        visible={donationVisible}
+        onClose={() => setDonationVisible(false)}
+      />
+
+      {/* ── Support Sheet ─────────────────────────────────────────────────── */}
+      <SupportSheet
+        visible={supportVisible}
+        onClose={() => setSupportVisible(false)}
+      />
     </View>
   );
 }
