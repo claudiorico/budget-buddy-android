@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
 import { Ionicons } from '@expo/vector-icons';
 import * as Linking from 'expo-linking';
+import * as Clipboard from 'expo-clipboard';
 import Constants from 'expo-constants';
 import { SUPPORT_EMAIL, APP_NAME } from '@/lib/contact';
 
@@ -93,16 +94,19 @@ export function SupportSheet({ visible, onClose }: Props) {
         `[${APP_NAME}] ${subject.trim()}`,
       )}&body=${encodeURIComponent(body)}`;
 
-      const can = await Linking.canOpenURL(url);
-      if (!can) {
+      // Não usar canOpenURL — Android 11+ retorna false se faltar <queries>
+      // no manifest, mesmo com Gmail instalado. Tentamos abrir direto e o
+      // catch trata se realmente não houver app de email.
+      try {
+        await Linking.openURL(url);
+        animateClose();
+      } catch {
+        await Clipboard.setStringAsync(SUPPORT_EMAIL);
         Alert.alert(
           'Sem app de email',
-          `Nenhum app de email configurado. Mande direto pra ${SUPPORT_EMAIL}.`,
+          `Nenhum app de email foi encontrado. O endereço ${SUPPORT_EMAIL} foi copiado pra área de transferência.`,
         );
-        return;
       }
-      await Linking.openURL(url);
-      animateClose();
     } catch (e) {
       Alert.alert('Erro', (e as Error).message || 'Não foi possível abrir o email.');
     } finally {
