@@ -31,6 +31,7 @@ import {
   encryptExpenseFields,
   decryptExpense,
   generateMnemonicAsync,
+  isValidBip39Mnemonic,
   validateMnemonic,
 } from '../lib/crypto';
 import { WORDLIST } from '../lib/bip39-wordlist';
@@ -261,6 +262,11 @@ describe('generateMnemonicAsync', () => {
     expect(mnemonic.split(' ')).toHaveLength(12);
   });
 
+  it('gera mnemonic BIP-39 com checksum vÃ¡lido', async () => {
+    const { mnemonic } = await generateMnemonicAsync();
+    expect(await isValidBip39Mnemonic(mnemonic)).toBe(true);
+  });
+
   it('todas as palavras estão no wordlist BIP-39', async () => {
     const { mnemonic } = await generateMnemonicAsync();
     for (const word of mnemonic.split(' ')) {
@@ -281,6 +287,11 @@ describe('validateMnemonic', () => {
   it('retorna null para mnemonic com 12 palavras válidas', async () => {
     const { mnemonic } = await generateMnemonicAsync();
     expect(validateMnemonic(mnemonic)).toBeNull();
+  });
+
+  it('aceita mnemonic legado de 12 palavras da wordlist mesmo sem checksum BIP-39', () => {
+    const legacy = Array(12).fill(WORDLIST[0]).join(' ');
+    expect(validateMnemonic(legacy)).toBeNull();
   });
 
   it('retorna erro se tiver menos de 12 palavras', () => {

@@ -29,7 +29,7 @@ export function ExpenseInputSheet({
   visible, categories, initialText, onCancel, onManual, onParsed,
 }: Props) {
   const insets = useSafeAreaInsets();
-  const { hasKey } = useGeminiKey();
+  const { hasKey, loading: keyLoading } = useGeminiKey();
   const { colorScheme } = useColorScheme();
   const sheetBg = colorScheme === 'dark' ? '#111827' : 'white';
 
@@ -115,6 +115,9 @@ export function ExpenseInputSheet({
       Alert.alert('Texto vazio', 'Descreva o gasto antes de continuar.');
       return;
     }
+    if (keyLoading) {
+      return;
+    }
     if (!hasKey) {
       Alert.alert(
         'Configure a IA',
@@ -136,7 +139,7 @@ export function ExpenseInputSheet({
     } finally {
       setParsing(false);
     }
-  }, [hasKey, categories, animateClose, onParsed]);
+  }, [hasKey, keyLoading, categories, animateClose, onParsed]);
 
   const startVoice = useCallback(async () => {
     try {
@@ -227,7 +230,7 @@ export function ExpenseInputSheet({
           >
             {stage === 'choose' && (
               <View className="gap-3 mt-2">
-                {!hasKey && (
+                {!keyLoading && !hasKey && (
                   <View className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-xl px-3 py-2.5 flex-row items-center gap-2 mb-1">
                     <Ionicons name="information-circle-outline" size={16} color="#D97706" />
                     <Text className="text-xs text-amber-700 dark:text-amber-300 flex-1">
@@ -242,7 +245,7 @@ export function ExpenseInputSheet({
                   label="Ditar por voz"
                   subtitle="Fale o gasto e a IA preenche"
                   onPress={() => setStage('voice')}
-                  disabled={!hasKey}
+                  disabled={keyLoading || !hasKey}
                 />
                 <ChoiceButton
                   icon="chatbubble-outline"
@@ -250,7 +253,7 @@ export function ExpenseInputSheet({
                   label="Descrever em texto"
                   subtitle='"Almoço hoje 45,90" → IA extrai os campos'
                   onPress={() => setStage('text')}
-                  disabled={!hasKey}
+                  disabled={keyLoading || !hasKey}
                 />
                 <ChoiceButton
                   icon="create-outline"

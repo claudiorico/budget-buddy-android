@@ -1,7 +1,9 @@
 import { GoogleGenAI, Type } from '@google/genai';
+import * as SecureStore from 'expo-secure-store';
 import { storage } from './storage';
 
 const KEY_STORAGE_KEY = 'gemini_api_key';
+const LEGACY_KEY_STORAGE_KEY = KEY_STORAGE_KEY;
 // gemini-2.5-flash-lite tem free tier ativo (15 RPM, 1500 RPD).
 // gemini-2.0-flash saiu do free tier em vários projetos novos (quota=0).
 const MODEL = 'gemini-2.5-flash-lite';
@@ -61,15 +63,25 @@ function friendlyGeminiError(err: unknown): GeminiApiError | null {
   return null;
 }
 
-export function getStoredApiKey(): string | null {
-  return storage.getString(KEY_STORAGE_KEY) ?? null;
+export async function getStoredApiKey(): Promise<string | null> {
+  const secureKey = await SecureStore.getItemAsync(KEY_STORAGE_KEY);
+  if (secureKey) return secureKey;
+
+  const legacyKey = storage.getString(LEGACY_KEY_STORAGE_KEY);
+  if (!legacyKey) return null;
+
+  await SecureStore.setItemAsync(KEY_STORAGE_KEY, legacyKey);
+  storage.remove(LEGACY_KEY_STORAGE_KEY);
+  return legacyKey;
 }
 
-export function setStoredApiKey(key: string): void {
-  storage.set(KEY_STORAGE_KEY, key.trim());
+export async function setStoredApiKey(key: string): Promise<void> {
+  await SecureStore.setItemAsync(KEY_STORAGE_KEY, key.trim());
+  storage.remove(LEGACY_KEY_STORAGE_KEY);
 }
 
-export function clearStoredApiKey(): void {
+export async function clearStoredApiKey(): Promise<void> {
+  await SecureStore.deleteItemAsync(KEY_STORAGE_KEY);
   storage.remove(KEY_STORAGE_KEY);
 }
 
@@ -108,7 +120,7 @@ export async function parseExpenseFromText(
   text: string,
   categories: CategoryHint[],
 ): Promise<ExpenseDraft> {
-  const apiKey = getStoredApiKey();
+  const apiKey = await getStoredApiKey();
   if (!apiKey) throw new MissingApiKeyError();
 
   const ai = new GoogleGenAI({ apiKey });

@@ -234,11 +234,51 @@ export async function decryptExpenses(
 
 // --- BIP-39 Mnemonic ---
 
-export function generateMnemonicAsync(): Promise<{ mnemonic: string }> {
-  const randomValues = new Uint16Array(12) as Uint16Array<ArrayBuffer>;
-  crypto.getRandomValues(randomValues);
-  const words = Array.from(randomValues, v => WORDLIST[v % WORDLIST.length]);
-  return Promise.resolve({ mnemonic: words.join(' ') });
+function bytesToBits(bytes: Uint8Array): string {
+  return Array.from(bytes, byte => byte.toString(2).padStart(8, '0')).join('');
+}
+
+async function entropyToMnemonic(entropy: Uint8Array<ArrayBuffer>): Promise<string> {
+  const hash = new Uint8Array(await crypto.subtle.digest('SHA-256', entropy));
+  const entropyBits = bytesToBits(entropy);
+  const checksumLength = entropy.length * 8 / 32;
+  const checksumBits = bytesToBits(hash).slice(0, checksumLength);
+  const bits = entropyBits + checksumBits;
+  const words: string[] = [];
+  for (let i = 0; i < bits.length; i += 11) {
+    words.push(WORDLIST[parseInt(bits.slice(i, i + 11), 2)]);
+  }
+  return words.join(' ');
+}
+
+export async function generateMnemonicAsync(): Promise<{ mnemonic: string }> {
+  const entropy = new Uint8Array(16) as Uint8Array<ArrayBuffer>;
+  crypto.getRandomValues(entropy);
+  return { mnemonic: await entropyToMnemonic(entropy) };
+}
+
+export async function isValidBip39Mnemonic(mnemonic: string): Promise<boolean> {
+  const words = mnemonic.trim().toLowerCase().split(/\s+/);
+  if (words.length !== 12) return false;
+
+  const bits = words.map((word) => {
+    const index = WORDLIST.indexOf(word);
+    if (index === -1) return null;
+    return index.toString(2).padStart(11, '0');
+  });
+  if (bits.some(bit => bit === null)) return false;
+
+  const joinedBits = bits.join('');
+  const entropyBits = joinedBits.slice(0, 128);
+  const checksumBits = joinedBits.slice(128);
+  const entropy = new Uint8Array(16) as Uint8Array<ArrayBuffer>;
+  for (let i = 0; i < entropy.length; i++) {
+    entropy[i] = parseInt(entropyBits.slice(i * 8, i * 8 + 8), 2);
+  }
+
+  const hash = new Uint8Array(await crypto.subtle.digest('SHA-256', entropy));
+  const expectedChecksum = bytesToBits(hash).slice(0, 4);
+  return checksumBits === expectedChecksum;
 }
 
 export function validateMnemonic(mnemonic: string): string | null {
