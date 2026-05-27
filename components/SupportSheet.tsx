@@ -11,6 +11,14 @@ import * as Clipboard from 'expo-clipboard';
 import Constants from 'expo-constants';
 import { SUPPORT_EMAIL, APP_NAME } from '@/lib/contact';
 
+type Subject = 'erro' | 'sugestao' | 'elogio';
+
+const SUBJECTS: { id: Subject; label: string; icon: string; color: string }[] = [
+  { id: 'erro',     label: 'Erro',     icon: '🐞', color: '#EF4444' },
+  { id: 'sugestao', label: 'Sugestão', icon: '💡', color: '#F59E0B' },
+  { id: 'elogio',   label: 'Elogio',   icon: '❤️', color: '#10B981' },
+];
+
 type Props = {
   visible: boolean;
   onClose: () => void;
@@ -22,7 +30,7 @@ export function SupportSheet({ visible, onClose }: Props) {
   const isDark = colorScheme === 'dark';
   const sheetBg = isDark ? '#111827' : 'white';
 
-  const [subject, setSubject] = useState('');
+  const [subject, setSubject] = useState<Subject | null>(null);
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
 
@@ -32,7 +40,7 @@ export function SupportSheet({ visible, onClose }: Props) {
 
   useEffect(() => {
     if (visible) {
-      setSubject('');
+      setSubject(null);
       setMessage('');
       kbOffset.setValue(0);
       Animated.spring(slideAnim, {
@@ -71,8 +79,8 @@ export function SupportSheet({ visible, onClose }: Props) {
   }, [slideAnim, onClose]);
 
   const handleSend = useCallback(async () => {
-    if (!subject.trim()) {
-      Alert.alert('Assunto obrigatório', 'Resuma o motivo do contato.');
+    if (!subject) {
+      Alert.alert('Assunto obrigatório', 'Escolha um tipo de mensagem.');
       return;
     }
     if (!message.trim()) {
@@ -81,9 +89,9 @@ export function SupportSheet({ visible, onClose }: Props) {
     }
     setSending(true);
     try {
+      const subjectMeta = SUBJECTS.find(s => s.id === subject)!;
       const appVersion = Constants.expoConfig?.version ?? 'dev';
       const platform = `${Platform.OS} ${Platform.Version}`;
-      // Footer com info técnica útil pra suporte
       const body =
         `${message.trim()}\n\n` +
         `---\n` +
@@ -91,7 +99,7 @@ export function SupportSheet({ visible, onClose }: Props) {
         `Plataforma: ${platform}`;
 
       const url = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(
-        `[${APP_NAME}] ${subject.trim()}`,
+        `[${APP_NAME}] ${subjectMeta.label}`,
       )}&body=${encodeURIComponent(body)}`;
 
       // Não usar canOpenURL — Android 11+ retorna false se faltar <queries>
@@ -156,16 +164,52 @@ export function SupportSheet({ visible, onClose }: Props) {
               Você revisa e envia direto pra {SUPPORT_EMAIL}.
             </Text>
 
-            <Text className="text-xs font-medium text-gray-500 mb-1.5">Assunto</Text>
-            <TextInput
-              testID="support-subject-input"
-              className="bg-gray-100 dark:bg-gray-800 rounded-xl px-4 py-3 text-sm text-gray-800 dark:text-gray-200 mb-3"
-              value={subject}
-              onChangeText={setSubject}
-              placeholder="Ex: Problema ao salvar gasto"
-              placeholderTextColor="#9CA3AF"
-              maxLength={100}
-            />
+            <Text className="text-xs font-medium text-gray-500 mb-2">Assunto</Text>
+            <View
+              testID="support-subject-selector"
+              style={{
+                flexDirection: 'row',
+                gap: 8,
+                marginBottom: 16,
+              }}
+            >
+              {SUBJECTS.map(opt => {
+                const active = subject === opt.id;
+                return (
+                  <TouchableOpacity
+                    key={opt.id}
+                    onPress={() => setSubject(opt.id)}
+                    activeOpacity={0.75}
+                    style={{
+                      flex: 1,
+                      alignItems: 'center',
+                      paddingVertical: 12,
+                      borderRadius: 12,
+                      borderWidth: 1.5,
+                      backgroundColor: active
+                        ? opt.color + '18'
+                        : (isDark ? '#1F2937' : '#FFFFFF'),
+                      borderColor: active
+                        ? opt.color
+                        : (isDark ? '#374151' : '#E5E7EB'),
+                    }}
+                  >
+                    <Text style={{ fontSize: 22, marginBottom: 4 }}>{opt.icon}</Text>
+                    <Text
+                      style={{
+                        fontSize: 13,
+                        fontWeight: '600',
+                        color: active
+                          ? opt.color
+                          : (isDark ? '#9CA3AF' : '#6B7280'),
+                      }}
+                    >
+                      {opt.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
 
             <Text className="text-xs font-medium text-gray-500 mb-1.5">Mensagem</Text>
             <TextInput

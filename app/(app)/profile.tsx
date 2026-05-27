@@ -381,52 +381,31 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* ── Security section ───────────────────────────────────────────── */}
-        <View className="mx-4 mb-4 bg-white dark:bg-gray-900 rounded-2xl shadow-sm overflow-hidden">
-          <View className="px-4 pt-4 pb-2">
-            <Text className="text-xs font-semibold text-gray-400 dark:text-gray-600 uppercase tracking-wider">
-              Segurança
-            </Text>
+        {/* ── 1. Apoiar card ──────────────────────────────────────────────── */}
+        <TouchableOpacity
+          testID="donation-card"
+          onPress={() => setDonationVisible(true)}
+          activeOpacity={0.85}
+          className="mx-4 mb-4"
+        >
+          <View
+            className="rounded-2xl p-5 flex-row items-center gap-4"
+            style={{ backgroundColor: '#10B981' }}
+          >
+            <View className="w-12 h-12 bg-white/20 rounded-full items-center justify-center">
+              <Text className="text-2xl">💚</Text>
+            </View>
+            <View className="flex-1">
+              <Text className="text-white font-bold text-base">Apoie o desenvolvedor</Text>
+              <Text className="text-white/80 text-xs mt-0.5">
+                PIX ou Bitcoin · App grátis e sem anúncios
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.7)" />
           </View>
+        </TouchableOpacity>
 
-          {/* Lock vault */}
-          <ActionRow
-            icon="lock-closed-outline"
-            iconColor="#F59E0B"
-            label="Bloquear cofre"
-            subtitle="Limpa a chave da memória"
-            onPress={handleLock}
-          />
-
-          <View className="mx-4 h-px bg-gray-100 dark:bg-gray-800" />
-
-          {/* Biometric unlock toggle */}
-          <ActionRow
-            icon="finger-print-outline"
-            iconColor="#0EA5E9"
-            label="Desbloqueio por digital"
-            subtitle={
-              !bio.support.hasHardware ? 'Não disponível neste aparelho'
-              : !bio.support.isEnrolled ? 'Cadastre uma digital no sistema'
-              : bio.enabled ? 'Ativado — toque pra desativar'
-              : 'Desativado — toque pra ativar'
-            }
-            onPress={handleBioToggle}
-          />
-
-          <View className="mx-4 h-px bg-gray-100 dark:bg-gray-800" />
-
-          {/* Regen recovery key */}
-          <ActionRow
-            icon="key-outline"
-            iconColor="#6366F1"
-            label="Regenerar chave de recuperação"
-            subtitle="Cria uma nova frase de 12 palavras"
-            onPress={openModal}
-          />
-        </View>
-
-        {/* ── Appearance section ─────────────────────────────────────────── */}
+        {/* ── 2. Appearance section ───────────────────────────────────────── */}
         <View className="mx-4 mb-4 bg-white dark:bg-gray-900 rounded-2xl shadow-sm overflow-hidden">
           <View className="px-4 pt-4 pb-2">
             <Text className="text-xs font-semibold text-gray-400 dark:text-gray-600 uppercase tracking-wider">
@@ -491,7 +470,84 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* ── Account section ────────────────────────────────────────────── */}
+        {/* ── 3. AI section ───────────────────────────────────────────────── */}
+        <View className="mx-4 mb-4 bg-white dark:bg-gray-900 rounded-2xl shadow-sm overflow-hidden">
+          <View className="px-4 pt-4 pb-2">
+            <Text className="text-xs font-semibold text-gray-400 dark:text-gray-600 uppercase tracking-wider">
+              IA
+            </Text>
+          </View>
+          <ActionRow
+            icon="sparkles-outline"
+            iconColor="#7C3AED"
+            label="Configurar API Gemini"
+            subtitle={hasKey ? 'Configurada — toque para alterar' : 'Não configurada'}
+            onPress={openAiModal}
+          />
+        </View>
+
+        {/* ── 4. Security section ─────────────────────────────────────────── */}
+        <View className="mx-4 mb-4 bg-white dark:bg-gray-900 rounded-2xl shadow-sm overflow-hidden">
+          <View className="px-4 pt-4 pb-2">
+            <Text className="text-xs font-semibold text-gray-400 dark:text-gray-600 uppercase tracking-wider">
+              Segurança
+            </Text>
+          </View>
+
+          {/* Lock vault */}
+          <ActionRow
+            icon="lock-closed-outline"
+            iconColor="#F59E0B"
+            label="Bloquear cofre"
+            subtitle="Limpa a chave da memória"
+            onPress={handleLock}
+          />
+
+          <View className="mx-4 h-px bg-gray-100 dark:bg-gray-800" />
+
+          {/* Biometric unlock toggle */}
+          <ActionRow
+            icon="finger-print-outline"
+            iconColor="#0EA5E9"
+            label="Desbloqueio por digital"
+            subtitle={
+              !bio.support.hasHardware ? 'Não disponível neste aparelho'
+              : !bio.support.isEnrolled ? 'Cadastre uma digital no sistema'
+              : bio.enabled ? 'Ativado — toque pra desativar'
+              : 'Desativado — toque pra ativar'
+            }
+            onPress={handleBioToggle}
+          />
+
+          <View className="mx-4 h-px bg-gray-100 dark:bg-gray-800" />
+
+          {/* Regen recovery key */}
+          <ActionRow
+            icon="key-outline"
+            iconColor="#6366F1"
+            label="Regenerar chave de recuperação"
+            subtitle="Cria uma nova frase de 12 palavras"
+            onPress={openModal}
+          />
+        </View>
+
+        {/* ── 5. Suporte ─────────────────────────────────────────────────── */}
+        <View className="mx-4 mb-4 bg-white dark:bg-gray-900 rounded-2xl shadow-sm overflow-hidden">
+          <View className="px-4 pt-4 pb-2">
+            <Text className="text-xs font-semibold text-gray-400 dark:text-gray-600 uppercase tracking-wider">
+              Suporte
+            </Text>
+          </View>
+          <ActionRow
+            icon="mail-outline"
+            iconColor="#2563EB"
+            label="Contato e suporte"
+            subtitle="Reportar bug ou enviar sugestão"
+            onPress={() => setSupportVisible(true)}
+          />
+        </View>
+
+        {/* ── 6. Account section ─────────────────────────────────────────── */}
         <View className="mx-4 mb-4 bg-white dark:bg-gray-900 rounded-2xl shadow-sm overflow-hidden">
           <View className="px-4 pt-4 pb-2">
             <Text className="text-xs font-semibold text-gray-400 dark:text-gray-600 uppercase tracking-wider">
@@ -509,23 +565,7 @@ export default function ProfileScreen() {
           />
         </View>
 
-        {/* ── AI section ─────────────────────────────────────────────────── */}
-        <View className="mx-4 mb-4 bg-white dark:bg-gray-900 rounded-2xl shadow-sm overflow-hidden">
-          <View className="px-4 pt-4 pb-2">
-            <Text className="text-xs font-semibold text-gray-400 dark:text-gray-600 uppercase tracking-wider">
-              IA
-            </Text>
-          </View>
-          <ActionRow
-            icon="sparkles-outline"
-            iconColor="#7C3AED"
-            label="Configurar API Gemini"
-            subtitle={hasKey ? 'Configurada — toque para alterar' : 'Não configurada'}
-            onPress={openAiModal}
-          />
-        </View>
-
-        {/* ── About section ──────────────────────────────────────────────── */}
+        {/* ── 7. About section ───────────────────────────────────────────── */}
         <View className="mx-4 mb-4 bg-white dark:bg-gray-900 rounded-2xl p-4 shadow-sm">
           <View className="px-0 pb-2">
             <Text className="text-xs font-semibold text-gray-400 dark:text-gray-600 uppercase tracking-wider">
@@ -538,46 +578,6 @@ export default function ProfileScreen() {
             <Row label="Criptografia" value="AES-256-GCM + PBKDF2" />
           </View>
         </View>
-
-        {/* ── Suporte ───────────────────────────────────────────────────── */}
-        <View className="mx-4 mb-4 bg-white dark:bg-gray-900 rounded-2xl shadow-sm overflow-hidden">
-          <View className="px-4 pt-4 pb-2">
-            <Text className="text-xs font-semibold text-gray-400 dark:text-gray-600 uppercase tracking-wider">
-              Suporte
-            </Text>
-          </View>
-          <ActionRow
-            icon="mail-outline"
-            iconColor="#2563EB"
-            label="Contato e suporte"
-            subtitle="Reportar bug ou enviar sugestão"
-            onPress={() => setSupportVisible(true)}
-          />
-        </View>
-
-        {/* ── Apoiar card ────────────────────────────────────────────────── */}
-        <TouchableOpacity
-          testID="donation-card"
-          onPress={() => setDonationVisible(true)}
-          activeOpacity={0.85}
-          className="mx-4 mb-2"
-        >
-          <View
-            className="rounded-2xl p-5 flex-row items-center gap-4"
-            style={{ backgroundColor: '#10B981' }}
-          >
-            <View className="w-12 h-12 bg-white/20 rounded-full items-center justify-center">
-              <Text className="text-2xl">💚</Text>
-            </View>
-            <View className="flex-1">
-              <Text className="text-white font-bold text-base">Apoie o desenvolvedor</Text>
-              <Text className="text-white/80 text-xs mt-0.5">
-                PIX ou Bitcoin · App grátis e sem anúncios
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.7)" />
-          </View>
-        </TouchableOpacity>
 
         <Text className="text-center text-xs text-gray-300 dark:text-gray-700 mt-4 px-8">
           Budget Buddy · Seus dados ficam apenas no seu Google Drive.{'\n'}
