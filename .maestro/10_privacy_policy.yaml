@@ -1,0 +1,46 @@
+appId: com.budgetbuddy.app
+name: "10 - Política de privacidade visível e clicável"
+---
+# Cobre:
+# - ActionRow "Política de privacidade" aparece em Perfil > Sobre
+# - Tap dispara abertura do in-app browser (Chrome Custom Tab)
+#
+# NÃO cobre:
+# - Conteúdo da página (Maestro não inspeciona browser externo)
+# - Renderização real do site (validação manual)
+
+- launchApp:
+    stopApp: false
+
+- waitForAnimationToEnd
+
+- runFlow:
+    when:
+      visible: "Desbloquear Cofre"
+    commands:
+      - tapOn:
+          id: "vault-password-input"
+      - inputText: "${VAULT_PASSWORD}"
+      - tapOn: "Desbloquear"
+      - extendedWaitUntil:
+          visible: "Perfil"
+          timeout: 15000
+
+- tapOn: "Perfil"
+- assertVisible: "Aparência"
+
+# Rola até Sobre + Política de privacidade
+- scrollUntilVisible:
+    element:
+      text: "Política de privacidade"
+
+- assertVisible: "Política de privacidade"
+- assertVisible: "O que coletamos e como é tratado"
+
+# Tocar não pode crashar nem mostrar Alert de erro
+- tapOn: "Política de privacidade"
+- waitForAnimationToEnd
+
+- assertNotVisible: "Não foi possível abrir a página"
+- assertNotVisible: "Couldn't find a navigation context"
+- assertNotVisible: "Something went wrong"

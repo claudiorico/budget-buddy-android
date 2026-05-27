@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import * as Linking from 'expo-linking';
 import * as Clipboard from 'expo-clipboard';
+import * as WebBrowser from 'expo-web-browser';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/contexts/AuthContext';
@@ -16,6 +17,7 @@ import { useBiometricVault } from '@/hooks/useBiometricVault';
 import { parseExpenseFromText } from '@/lib/ai';
 import { DonationSheet } from '@/components/DonationSheet';
 import { SupportSheet } from '@/components/SupportSheet';
+import { hasPrivacyPolicyUrl, PRIVACY_POLICY_URL } from '@/constants/legal';
 
 const GEMINI_KEY_URL = 'https://aistudio.google.com/apikey';
 
@@ -231,8 +233,8 @@ export default function ProfileScreen() {
     }).start(() => setAiModalVisible(false));
   }, [aiSlideAnim]);
 
-  const handleAiSave = useCallback(() => {
-    setApiKey(aiKeyInput);
+  const handleAiSave = useCallback(async () => {
+    await setApiKey(aiKeyInput);
     closeAiModal();
   }, [aiKeyInput, setApiKey, closeAiModal]);
 
@@ -243,7 +245,7 @@ export default function ProfileScreen() {
       [
         { text: 'Cancelar', style: 'cancel' },
         { text: 'Remover', style: 'destructive', onPress: () => {
-          clearKey();
+          void clearKey();
           closeAiModal();
         }},
       ],
@@ -256,7 +258,7 @@ export default function ProfileScreen() {
       setAiTestMessage('Cole a chave primeiro.');
       return;
     }
-    setApiKey(aiKeyInput);
+    await setApiKey(aiKeyInput);
     setAiTestState('testing');
     setAiTestMessage('');
     try {
@@ -276,6 +278,12 @@ export default function ProfileScreen() {
 
   const handleOpenKeyDocs = useCallback(() => {
     Linking.openURL(GEMINI_KEY_URL);
+  }, []);
+
+  const handleOpenPrivacyPolicy = useCallback(() => {
+    if (hasPrivacyPolicyUrl) {
+      Linking.openURL(PRIVACY_POLICY_URL);
+    }
   }, []);
 
   // ── Biometric handlers ───────────────────────────────────────────────────
@@ -545,6 +553,18 @@ export default function ProfileScreen() {
             subtitle="Reportar bug ou enviar sugestão"
             onPress={() => setSupportVisible(true)}
           />
+          {hasPrivacyPolicyUrl && (
+            <>
+              <View className="mx-4 h-px bg-gray-100 dark:bg-gray-800" />
+              <ActionRow
+                icon="shield-checkmark-outline"
+                iconColor="#10B981"
+                label="Politica de Privacidade"
+                subtitle="Abrir a pagina publicada"
+                onPress={handleOpenPrivacyPolicy}
+              />
+            </>
+          )}
         </View>
 
         {/* ── 6. Account section ─────────────────────────────────────────── */}
@@ -566,17 +586,34 @@ export default function ProfileScreen() {
         </View>
 
         {/* ── 7. About section ───────────────────────────────────────────── */}
-        <View className="mx-4 mb-4 bg-white dark:bg-gray-900 rounded-2xl p-4 shadow-sm">
-          <View className="px-0 pb-2">
+        <View className="mx-4 mb-4 bg-white dark:bg-gray-900 rounded-2xl shadow-sm overflow-hidden">
+          <View className="px-4 pt-4 pb-2">
             <Text className="text-xs font-semibold text-gray-400 dark:text-gray-600 uppercase tracking-wider">
               Sobre
             </Text>
           </View>
-          <View className="gap-1 mt-1">
+          <View className="gap-1 px-4 pb-3">
             <Row label="Versão" value="1.0.0" />
             <Row label="Armazenamento" value="Google Drive (appdata)" />
             <Row label="Criptografia" value="AES-256-GCM + PBKDF2" />
           </View>
+
+          {hasPrivacyPolicyUrl && (
+            <>
+              <View className="mx-4 h-px bg-gray-100 dark:bg-gray-800" />
+              <ActionRow
+                icon="shield-checkmark-outline"
+                iconColor="#10B981"
+                label="Política de privacidade"
+                subtitle="O que coletamos e como é tratado"
+                onPress={() => {
+                  WebBrowser.openBrowserAsync(PRIVACY_POLICY_URL).catch(() => {
+                    Alert.alert('Erro', 'Não foi possível abrir a página.');
+                  });
+                }}
+              />
+            </>
+          )}
         </View>
 
         <Text className="text-center text-xs text-gray-300 dark:text-gray-700 mt-4 px-8">
