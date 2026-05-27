@@ -9,7 +9,10 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Linking from 'expo-linking';
 import * as Clipboard from 'expo-clipboard';
 import Constants from 'expo-constants';
-import { SUPPORT_EMAIL, APP_NAME } from '@/lib/contact';
+import {
+  SUPPORT_EMAIL, APP_NAME,
+  WEB3FORMS_KEY, WEB3FORMS_ENDPOINT,
+} from '@/lib/contact';
 
 type Subject = 'erro' | 'sugestao' | 'elogio';
 
@@ -78,49 +81,88 @@ export function SupportSheet({ visible, onClose }: Props) {
     }).start(() => onClose());
   }, [slideAnim, onClose]);
 
-  const handleSend = useCallback(async () => {
+  /** Valida campos comuns. Retorna metadata do assunto ou null se inválido. */
+  const validate = useCallback(() => {
     if (!subject) {
       Alert.alert('Assunto obrigatório', 'Escolha um tipo de mensagem.');
-      return;
+      return null;
     }
     if (!message.trim()) {
       Alert.alert('Mensagem obrigatória', 'Descreva o problema ou sugestão.');
-      return;
+      return null;
     }
+    return SUBJECTS.find(s => s.id === subject)!;
+  }, [subject, message]);
+
+  /** Monta body padronizado com info técnica útil pra suporte. */
+  const buildBody = useCallback(() => {
+    const appVersion = Constants.expoConfig?.version ?? 'dev';
+    const platform = `${Platform.OS} ${Platform.Version}`;
+    return (
+      `${message.trim()}\n\n` +
+      `---\n` +
+      `App: ${APP_NAME} v${appVersion}\n` +
+      `Plataforma: ${platform}`
+    );
+  }, [message]);
+
+  /** Envio primário: POST direto pro Web3Forms, sem abrir app externo. */
+  const handleSubmit = useCallback(async () => {
+    const subjectMeta = validate();
+    if (!subjectMeta) return;
     setSending(true);
     try {
-      const subjectMeta = SUBJECTS.find(s => s.id === subject)!;
-      const appVersion = Constants.expoConfig?.version ?? 'dev';
-      const platform = `${Platform.OS} ${Platform.Version}`;
-      const body =
-        `${message.trim()}\n\n` +
-        `---\n` +
-        `App: ${APP_NAME} v${appVersion}\n` +
-        `Plataforma: ${platform}`;
-
-      const url = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(
-        `[${APP_NAME}] ${subjectMeta.label}`,
-      )}&body=${encodeURIComponent(body)}`;
-
-      // Não usar canOpenURL — Android 11+ retorna false se faltar <queries>
-      // no manifest, mesmo com Gmail instalado. Tentamos abrir direto e o
-      // catch trata se realmente não houver app de email.
-      try {
-        await Linking.openURL(url);
-        animateClose();
-      } catch {
-        await Clipboard.setStringAsync(SUPPORT_EMAIL);
-        Alert.alert(
-          'Sem app de email',
-          `Nenhum app de email foi encontrado. O endereço ${SUPPORT_EMAIL} foi copiado pra área de transferência.`,
-        );
+      const res = await fetch(WEB3FORMS_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          access_key: WEB3FORMS_KEY,
+          subject: `[${APP_NAME}] ${subjectMeta.label}`,
+          message: buildBody(),
+          from_name: `Usuário ${APP_NAME}`,
+          email: SUPPORT_EMAIL,
+        }),
+      });
+      const json: { success?: boolean; message?: string } = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.message || `HTTP ${res.status}`);
       }
+      animateClose();
+      // Pequeno delay pra animação fechar antes do alert (UX)
+      setTimeout(() => {
+        Alert.alert('Mensagem enviada', 'Obrigado pelo contato!');
+      }, 250);
     } catch (e) {
-      Alert.alert('Erro', (e as Error).message || 'Não foi possível abrir o email.');
+      Alert.alert(
+        'Falha no envio',
+        `Não foi possível enviar a mensagem. Tente usar o app de email pelo botão abaixo.\n\nErro: ${(e as Error).message}`,
+      );
     } finally {
       setSending(false);
     }
-  }, [subject, message, animateClose]);
+  }, [validate, buildBody, animateClose]);
+
+  /** Fallback: abre o app de email do user com tudo pré-preenchido. */
+  const handleEmailFallback = useCallback(async () => {
+    const subjectMeta = validate();
+    if (!subjectMeta) return;
+    const url = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(
+      `[${APP_NAME}] ${subjectMeta.label}`,
+    )}&body=${encodeURIComponent(buildBody())}`;
+    try {
+      await Linking.openURL(url);
+      animateClose();
+    } catch {
+      await Clipboard.setStringAsync(SUPPORT_EMAIL);
+      Alert.alert(
+        'Sem app de email',
+        `Nenhum app de email foi encontrado. O endereço ${SUPPORT_EMAIL} foi copiado pra área de transferência.`,
+      );
+    }
+  }, [validate, buildBody, animateClose]);
 
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={animateClose}>
@@ -226,20 +268,36 @@ export function SupportSheet({ visible, onClose }: Props) {
             />
 
             <TouchableOpacity
-              onPress={handleSend}
+              testID="support-send-btn"
+              onPress={handleSubmit}
               disabled={sending}
               activeOpacity={0.85}
-              className="bg-blue-600 rounded-xl py-3.5 flex-row items-center justify-center gap-2"
+              className={`rounded-xl py-3.5 flex-row items-center justify-center gap-2 mb-2 ${
+                sending ? 'bg-blue-300' : 'bg-blue-600'
+              }`}
             >
-              <Ionicons name="mail-outline" size={18} color="white" />
+              <Ionicons name="send" size={16} color="white" />
               <Text className="text-white font-semibold text-sm">
-                {sending ? 'Abrindo email...' : 'Enviar email'}
+                {sending ? 'Enviando...' : 'Enviar'}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              testID="support-mailto-btn"
+              onPress={handleEmailFallback}
+              disabled={sending}
+              activeOpacity={0.85}
+              className="rounded-xl py-3 flex-row items-center justify-center gap-2 border border-gray-200 dark:border-gray-700"
+            >
+              <Ionicons name="mail-outline" size={16} color={isDark ? '#9CA3AF' : '#6B7280'} />
+              <Text className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                Ou abrir no app de email
               </Text>
             </TouchableOpacity>
 
             <Text className="text-xs text-gray-400 dark:text-gray-600 text-center mt-3">
-              Versão do app e plataforma serão incluídas automaticamente
-              pra ajudar no suporte.
+              Versão do app e plataforma são incluídas automaticamente.
+              Você não precisa informar seu email.
             </Text>
           </ScrollView>
         </Animated.View>

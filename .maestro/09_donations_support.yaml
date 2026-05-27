@@ -35,7 +35,8 @@ name: "09 - Doações (PIX/BTC) e Suporte"
 - assertVisible: "Sugestão"
 - assertVisible: "Elogio"
 - assertVisible: "Mensagem"
-- assertVisible: "Enviar email"
+- assertVisible: "Enviar"
+- assertVisible: "Ou abrir no app de email"
 
 # Seleciona "Sugestão" — confirma que o seletor responde
 - tapOn: "Sugestão"
