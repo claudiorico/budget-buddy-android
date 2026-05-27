@@ -41,7 +41,7 @@ A chave de criptografia (DEK) **nunca sai do seu celular** — fica apenas em me
 Gerada localmente no seu celular usando o padrão BIP-39 (mesmo de carteiras de criptomoedas). **Mostrada uma única vez na criação do cofre** e **nunca enviada a lugar nenhum**. Você é responsável por anotar e guardar em local seguro.
 
 ### 2.5. Chave de API do Gemini (opcional)
-Se você optar por usar a funcionalidade de extração inteligente de gastos por voz/texto, **você fornece sua própria chave da API do Google Gemini** (gratuita no Google AI Studio). Essa chave é armazenada localmente no seu celular (MMKV) e usada exclusivamente para chamar a API do Google. **Não temos acesso a ela.**
+Se você optar por usar a funcionalidade de extração inteligente de gastos por voz/texto, **você fornece sua própria chave da API do Google Gemini** (gratuita no Google AI Studio). Essa chave é armazenada localmente no seu celular usando **SecureStore/Android Keystore** e usada exclusivamente para chamar a API do Google. **Não temos acesso a ela.**
 
 ### 2.6. O que **NÃO** coletamos
 - Sem analytics (Firebase, Google Analytics, etc).
@@ -116,7 +116,7 @@ O app não é direcionado a menores de 13 anos. Não coletamos intencionalmente 
 - **Android Keystore** (hardware-backed quando disponível) para a senha protegida por biometria
 - **BIP-39 padrão** para a chave de recuperação de 12 palavras
 
-Detalhes técnicos no código-fonte: [github.com/claudiorico81/budget-buddy-android](https://github.com/claudiorico81/budget-buddy-android) (se aplicável).
+Detalhes técnicos sobre criptografia, armazenamento e permissões estão resumidos nesta política. O código-fonte do app não é publicado junto com a página de privacidade.
 
 ## 8. Seus direitos
 

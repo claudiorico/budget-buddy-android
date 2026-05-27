@@ -43,6 +43,9 @@ yarn-error.*
 # Google Services — contains client IDs, use EAS secrets in CI
 google-services.json
 GoogleService-Info.plist
+credentials.json
+/credentials/
 
 # Claude Code local session files
 .claude/
+.idea/
