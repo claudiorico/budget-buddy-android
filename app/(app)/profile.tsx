@@ -676,6 +676,7 @@ export default function ProfileScreen() {
                 </Text>
                 <View className="bg-gray-100 dark:bg-gray-800 rounded-xl flex-row items-center px-4 mb-3">
                   <TextInput
+                    testID="ai-key-input"
                     className="flex-1 py-3 text-sm text-gray-800 dark:text-gray-200"
                     value={aiKeyInput}
                     onChangeText={text => {

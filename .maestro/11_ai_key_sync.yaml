@@ -1,0 +1,124 @@
+appId: com.budgetbuddy.app
+name: "11 - Sync da chave Gemini entre Perfil e Sheet de gastos"
+---
+# Reproduz o bug: ao salvar a chave em Perfil > Configurar API Gemini,
+# o Sheet de gastos (já montado na tab Gastos) ficava com hasKey=false
+# em cache local porque useGeminiKey mantinha estado por instância.
+#
+# Cenário:
+# 1. Limpa a chave atual via Perfil
+# 2. Vai pra Gastos e abre o sheet -> warning "Configure a IA" visível
+# 3. Volta pra Perfil e configura uma chave de teste
+# 4. Volta pra Gastos (Sheet permanece montado) e abre o sheet
+#    -> warning NÃO deve estar visível (validação do fix)
+# 5. Cleanup: limpa a chave de teste
+#
+# ATENÇÃO: ao final, a chave Gemini fica vazia. Reentre manualmente
+# em Perfil > Configurar API Gemini depois do teste.
+
+- launchApp:
+    stopApp: false
+
+- waitForAnimationToEnd
+
+- runFlow:
+    when:
+      visible: "Desbloquear Cofre"
+    commands:
+      - tapOn:
+          id: "vault-password-input"
+      - inputText: "${VAULT_PASSWORD}"
+      - tapOn: "Desbloquear"
+      - extendedWaitUntil:
+          visible: "Gastos"
+          timeout: 15000
+
+# ── ETAPA 1: ir pro Perfil e limpar a chave ──────────────────────────────────
+- tapOn: "Perfil"
+- waitForAnimationToEnd
+
+- scrollUntilVisible:
+    element:
+      text: "Configurar API Gemini"
+
+- tapOn: "Configurar API Gemini"
+- waitForAnimationToEnd
+
+# Se já tem chave configurada, "Remover chave" aparece — tap pra limpar
+- runFlow:
+    when:
+      visible: "Remover chave"
+    commands:
+      - tapOn: "Remover chave"
+      - tapOn: "Remover"
+      - waitForAnimationToEnd
+
+# Fecha o modal tocando no backdrop (area acima da sheet)
+- tapOn:
+    point: "50%,5%"
+- waitForAnimationToEnd
+
+# ── ETAPA 2: ir pra Gastos e validar warning visível ─────────────────────────
+- tapOn: "Gastos"
+- waitForAnimationToEnd
+
+- tapOn:
+    id: "fab-add-expense"
+- assertVisible: "Adicionar gasto"
+- assertVisible: "Configure a IA no Perfil para usar texto/voz."
+
+# Fecha o sheet
+- tapOn:
+    point: "50%,5%"
+- waitForAnimationToEnd
+
+# ── ETAPA 3: voltar pro Perfil e configurar chave de teste ────────────────────
+- tapOn: "Perfil"
+- waitForAnimationToEnd
+
+- scrollUntilVisible:
+    element:
+      text: "Configurar API Gemini"
+- tapOn: "Configurar API Gemini"
+- waitForAnimationToEnd
+
+- tapOn:
+    id: "ai-key-input"
+- inputText: "AIzaTESTKEYFAKEDONOTUSE_FORSYNCMAESTROFLOW"
+
+- tapOn: "Salvar"
+- waitForAnimationToEnd
+
+# ── ETAPA 4: validar o FIX — Sheet de gastos deve refletir hasKey=true ──────
+- tapOn: "Gastos"
+- waitForAnimationToEnd
+
+- tapOn:
+    id: "fab-add-expense"
+- assertVisible: "Adicionar gasto"
+
+# Esse é o coração do teste: warning NÃO pode estar visível mais
+- assertNotVisible: "Configure a IA no Perfil para usar texto/voz."
+
+# Os 3 botões existem; "Ditar por voz" e "Descrever em texto" devem estar habilitados
+- assertVisible: "Ditar por voz"
+- assertVisible: "Descrever em texto"
+
+# Fecha o sheet
+- tapOn:
+    point: "50%,5%"
+- waitForAnimationToEnd
+
+# ── ETAPA 5: cleanup — limpa a chave de teste ────────────────────────────────
+- tapOn: "Perfil"
+- waitForAnimationToEnd
+
+- scrollUntilVisible:
+    element:
+      text: "Configurar API Gemini"
+- tapOn: "Configurar API Gemini"
+- waitForAnimationToEnd
+
+- tapOn: "Remover chave"
+- tapOn: "Remover"
+- waitForAnimationToEnd
