@@ -11,7 +11,8 @@ import * as Clipboard from 'expo-clipboard';
 import Constants from 'expo-constants';
 import {
   SUPPORT_EMAIL, APP_NAME,
-  WEB3FORMS_KEY, WEB3FORMS_ENDPOINT,
+  EMAILJS_ENDPOINT, EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID,
+  EMAILJS_PUBLIC_KEY, EMAILJS_PRIVATE_KEY,
 } from '@/lib/contact';
 
 type Subject = 'erro' | 'sugestao' | 'elogio';
@@ -112,26 +113,27 @@ export function SupportSheet({ visible, onClose }: Props) {
     if (!subjectMeta) return;
     setSending(true);
     try {
-      const res = await fetch(WEB3FORMS_ENDPOINT, {
+      const res = await fetch(EMAILJS_ENDPOINT, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Accept: 'application/json',
-          // Web3Forms detecta server-side por ausência de Origin e bloqueia
-          // com "This method is not allowed" no free tier. Setamos um Origin
-          // do nosso app pra que ele identifique como chamada client-side.
-          Origin: 'https://gestaodegastosapp.com',
         },
         body: JSON.stringify({
-          access_key: WEB3FORMS_KEY,
-          subject: `[${APP_NAME}] ${subjectMeta.label}`,
-          message: buildBody(),
-          from_name: `Usuário do ${APP_NAME}`,
+          service_id: EMAILJS_SERVICE_ID,
+          template_id: EMAILJS_TEMPLATE_ID,
+          user_id: EMAILJS_PUBLIC_KEY,
+          accessToken: EMAILJS_PRIVATE_KEY,
+          template_params: {
+            subject: `[${APP_NAME}] ${subjectMeta.label}`,
+            message: buildBody(),
+            from_name: `Usuário do ${APP_NAME}`,
+          },
         }),
       });
-      const json: { success?: boolean; message?: string } = await res.json();
-      if (!res.ok || !json.success) {
-        throw new Error(json.message || `HTTP ${res.status}`);
+      // EmailJS retorna "OK" como texto plano em sucesso, JSON em erro
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(errText || `HTTP ${res.status}`);
       }
       animateClose();
       // Pequeno delay pra animação fechar antes do alert (UX)

@@ -7,12 +7,16 @@ export const APP_NAME = 'Gestão de Gastos';
 
 export const SUPPORT_EMAIL = 'gestaodegastosapp@gmail.com';
 
-// Chave pública Web3Forms — encaminha mensagens do form direto pro SUPPORT_EMAIL
-// sem precisar de backend. Trocar em web3forms.com se quiser nova key/email.
-// Por design, esta key é pública (vai no APK); a segurança vem do throttling
-// do próprio Web3Forms (250 msg/mês no free tier).
-export const WEB3FORMS_KEY = '287113a6-6115-44cd-ba71-7219142a05aa';
-export const WEB3FORMS_ENDPOINT = 'https://api.web3forms.com/submit';
+// EmailJS — encaminha mensagens do form direto pro SUPPORT_EMAIL via Gmail
+// conectado via OAuth no dashboard.emailjs.com. Sem backend próprio.
+// Public/Private keys aqui vão no APK; segurança vem do throttling do EmailJS
+// (200 msg/mês no free tier) + strict mode com Private Key.
+// Para trocar: alterar em dashboard.emailjs.com e atualizar as 4 constantes abaixo.
+export const EMAILJS_ENDPOINT = 'https://api.emailjs.com/api/v1.0/email/send';
+export const EMAILJS_SERVICE_ID = 'service_0w7d3d7';
+export const EMAILJS_TEMPLATE_ID = 'template_18ux6uf';
+export const EMAILJS_PUBLIC_KEY = 'p-DbpgTCERsF9YA-z';
+export const EMAILJS_PRIVATE_KEY = 'Z-ZJvAI9eiPc5AnO5Aggf';
 
 // ── Doações ────────────────────────────────────────────────────────────────
 
