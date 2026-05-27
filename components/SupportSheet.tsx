@@ -117,13 +117,16 @@ export function SupportSheet({ visible, onClose }: Props) {
         headers: {
           'Content-Type': 'application/json',
           Accept: 'application/json',
+          // Web3Forms detecta server-side por ausência de Origin e bloqueia
+          // com "This method is not allowed" no free tier. Setamos um Origin
+          // do nosso app pra que ele identifique como chamada client-side.
+          Origin: 'https://gestaodegastosapp.com',
         },
         body: JSON.stringify({
           access_key: WEB3FORMS_KEY,
           subject: `[${APP_NAME}] ${subjectMeta.label}`,
           message: buildBody(),
-          from_name: `Usuário ${APP_NAME}`,
-          email: SUPPORT_EMAIL,
+          from_name: `Usuário do ${APP_NAME}`,
         }),
       });
       const json: { success?: boolean; message?: string } = await res.json();
