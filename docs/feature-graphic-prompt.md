@@ -11,15 +11,18 @@
 
 ### Prompt pra Midjourney / Gemini Image / Imagen 4
 
+> Paleta consistente com o ícone do app: laranja queimado (carteira/barras) + roxo profundo (fundo) + dourado (cadeado/acentos).
+
 ```
-Modern minimalist banner for an Android personal finance app named "Gestão de Gastos" (Portuguese). 1024x500 horizontal landscape composition. Color palette: deep navy blue (#0F172A) as background with vibrant emerald green (#10B981) and bright blue (#2563EB) accents. On the left third: a stylized abstract padlock icon merged with a shield in clean geometric line-art style, in soft green-blue gradient, suggesting privacy and security. On the right two-thirds: a clean, modern bar chart in 3-4 ascending bars (small to tall) using the green/blue palette, plus a small floating donut/pie chart fragment overlapping subtly. Above the chart, a soft glowing tagline in elegant sans-serif: "Seus gastos. Sua privacidade." in white with subtle drop shadow. Geometric accents: thin diagonal lines and small circular dots scattered, suggesting data flow. Slight gradient overlay top-to-bottom from #0F172A to #1F2937. Flat 2D style, no people, no realistic objects, no logos of other companies. Premium fintech aesthetic, banking-app vibes, clean and trustworthy. Centered safe area for letterbox.
+Modern minimalist banner for an Android personal finance app named "Gestão de Gastos" (Portuguese). 1024x500 horizontal landscape composition. Color palette: deep purple (#3B0764) as the dominant background with a faint radial brightening at center toward indigo-purple (#581C87), warm burnt orange (#EA580C to #F97316) for primary subjects, and bright gold (#FCD34D to #F59E0B) for accents and the padlock — a distinctive warm/bold scheme. On the left third: a stylized abstract padlock icon merged with a shield in clean geometric line-art style, padlock rendered in bright gold gradient (#FCD34D to #F59E0B) with a thin darker amber outline for a metallic feel, shield in burnt orange (#EA580C to #F97316), suggesting privacy and security with a premium gold-on-orange contrast. On the right two-thirds: a clean modern bar chart in 3-4 ascending bars (small to tall) in burnt orange to amber-orange gradient (#EA580C to #F97316), plus a small floating donut/pie chart fragment in mixed gold and orange overlapping subtly. Above the chart, a soft glowing tagline in elegant sans-serif: "Seus gastos. Sua privacidade." in warm cream (#FEF3C7) with a subtle gold-amber glow. Geometric accents: thin diagonal lines in gold and small circular dots in amber scattered, suggesting data flow. Slight gradient overlay top-to-bottom from #3B0764 to #1E1B4B (deep purple to deeper indigo). Flat 2D style, no people, no realistic objects, no logos of other companies. Premium fintech aesthetic with a distinctive warm/bold personality (not the typical cold teal/green fintech look), clean and trustworthy. Centered safe area for letterbox.
 ```
 
 **Variações se quiser testar:**
 
-- Trocar "padlock+shield" por "wallet+lock" se preferir referência financeira mais direta
+- Trocar "padlock+shield" por "wallet with small gold padlock accent" pra refletir literalmente o ícone do app
 - Mudar tagline pra `"Privacidade real pros seus gastos."` (mais curto)
-- Versão claro: trocar background #0F172A por #F9FAFB e accents por #2563EB / #059669
+- Suavizar o roxo: trocar `#3B0764` por `#4C1D95` se a primeira saída ficar muito escura
+- Mais contraste no cadeado: descrever o cadeado como `"cool teal/mint gradient (#5EEAD4 to #2DD4BF)"` em vez de gold — fica complementar real ao laranja (mais ousado, menos "premium banking")
 
 ### Plano B (sem IA, usando Canva)
 
