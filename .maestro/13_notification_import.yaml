@@ -5,14 +5,14 @@ name: "13 - Captura de notificação bancária (NotificationListenerService)"
 # │ PRÉ-REQUISITO — injetar notificação pendente via adb (debug build)        │
 # │                                                                           │
 # │ O NotificationListenerService não pode ser disparado pelo Maestro.        │
-# │ Simulamos escrevendo no SharedPreferences do app antes de abrir:          │
+# │ Simulamos escrevendo na fila JSON do SharedPreferences antes de abrir:    │
 # │                                                                           │
 # │   adb shell run-as com.budgetbuddy.app sh -c \                            │
 # │     "mkdir -p /data/data/com.budgetbuddy.app/shared_prefs && \            │
 # │      printf '<?xml version='\''1.0'\'' encoding='\''utf-8'\'' \           │
 # │      standalone='\''yes'\'' ?>\n<map>\n<string \                          │
-# │      name='\''pending_text'\''>Compra aprovada R$ 78,50 \                 │
-# │      SUPERMERCADO BOM PRECO</string>\n</map>' \                           │
+# │      name='\''pending_queue'\''>[\"Compra aprovada R$ 78,50 \             │
+# │      SUPERMERCADO BOM PRECO\"]</string>\n</map>' \                        │
 # │      > /data/data/com.budgetbuddy.app/shared_prefs/budget_buddy_notif.xml"│
 # │                                                                           │
 # │ Depois: maestro test -e VAULT_PASSWORD=... .maestro/13_notification_…     │

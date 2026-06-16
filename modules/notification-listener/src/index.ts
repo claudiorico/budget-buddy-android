@@ -2,12 +2,16 @@ import { requireNativeModule } from 'expo-modules-core';
 
 const NativeModule = requireNativeModule('NotificationListener');
 
-export function getPendingNotification(): string | null {
-  return NativeModule.getPendingNotification() ?? null;
+export function getPendingNotifications(): string[] {
+  return NativeModule.getPendingNotifications() ?? [];
 }
 
-export function clearPendingNotification(): void {
-  NativeModule.clearPendingNotification();
+export function removePendingNotification(text: string): void {
+  NativeModule.removePendingNotification(text);
+}
+
+export function clearPendingNotifications(): void {
+  NativeModule.clearPendingNotifications();
 }
 
 export function isPermissionGranted(): boolean {

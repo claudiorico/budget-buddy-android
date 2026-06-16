@@ -8,14 +8,21 @@ class NotificationListenerModule : Module() {
     override fun definition() = ModuleDefinition {
         Name("NotificationListener")
 
-        Function("getPendingNotification") {
-            val ctx = appContext.reactContext ?: return@Function null
-            BudgetBuddyNotificationService.getPendingText(ctx)
+        Function("getPendingNotifications") {
+            val ctx = appContext.reactContext ?: return@Function emptyList<String>()
+            BudgetBuddyNotificationService.getPendingQueue(ctx)
         }
 
-        Function("clearPendingNotification") {
+        Function("removePendingNotification") { text: String ->
             appContext.reactContext?.also { ctx ->
-                BudgetBuddyNotificationService.clearPendingText(ctx)
+                BudgetBuddyNotificationService.removePendingText(ctx, text)
+            }
+            null
+        }
+
+        Function("clearPendingNotifications") {
+            appContext.reactContext?.also { ctx ->
+                BudgetBuddyNotificationService.clearPendingQueue(ctx)
             }
             null
         }
@@ -40,7 +47,7 @@ class NotificationListenerModule : Module() {
 
         Function("simulateCapture") { text: String ->
             appContext.reactContext?.also { ctx ->
-                BudgetBuddyNotificationService.setPendingText(ctx, text)
+                BudgetBuddyNotificationService.addPendingText(ctx, text)
             }
             null
         }

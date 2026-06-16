@@ -9,19 +9,23 @@ import android.os.Build
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import androidx.core.app.NotificationCompat
+import org.json.JSONArray
 
 class BudgetBuddyNotificationService : NotificationListenerService() {
 
     companion object {
         private const val PREFS_NAME = "budget_buddy_notif"
-        private const val KEY_PENDING_TEXT = "pending_text"
+        private const val KEY_PENDING_QUEUE = "pending_queue"
+        private const val MAX_QUEUE_SIZE = 30
         private const val CHANNEL_ID = "budget_buddy_imports"
         private const val NOTIF_ID = 9901
 
         private val BANK_PACKAGES = setOf(
-            "com.nu.production",  // Nubank
-            "com.bradesco",       // Bradesco
-            "com.santander.app",  // Santander
+            "com.nu.production",                     // Nubank
+            "com.bradesco",                          // Bradesco
+            "com.santander.app",                     // Santander
+            "com.samsung.android.spay",              // Samsung Pay
+            "com.google.android.apps.walletnfcrel",  // Google Wallet
         )
 
         // Patterns that suggest a bank expense notification in Brazilian Portuguese
@@ -35,18 +39,34 @@ class BudgetBuddyNotificationService : NotificationListenerService() {
             Regex("compra.*crédito", RegexOption.IGNORE_CASE),
         )
 
-        fun getPendingText(context: Context): String? =
+        private fun prefs(context: Context) =
             context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                .getString(KEY_PENDING_TEXT, null)
 
-        fun clearPendingText(context: Context) {
-            context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                .edit().remove(KEY_PENDING_TEXT).apply()
+        fun getPendingQueue(context: Context): List<String> {
+            val raw = prefs(context).getString(KEY_PENDING_QUEUE, null) ?: return emptyList()
+            val arr = JSONArray(raw)
+            return (0 until arr.length()).map { arr.getString(it) }
         }
 
-        fun setPendingText(context: Context, text: String) {
-            context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                .edit().putString(KEY_PENDING_TEXT, text).apply()
+        fun addPendingText(context: Context, text: String) {
+            val queue = (getPendingQueue(context) + text).takeLast(MAX_QUEUE_SIZE)
+            saveQueue(context, queue)
+        }
+
+        fun removePendingText(context: Context, text: String) {
+            val queue = getPendingQueue(context).toMutableList()
+            queue.remove(text)
+            saveQueue(context, queue)
+        }
+
+        fun clearPendingQueue(context: Context) {
+            prefs(context).edit().remove(KEY_PENDING_QUEUE).apply()
+        }
+
+        private fun saveQueue(context: Context, queue: List<String>) {
+            val arr = JSONArray()
+            queue.forEach { arr.put(it) }
+            prefs(context).edit().putString(KEY_PENDING_QUEUE, arr.toString()).apply()
         }
     }
 
@@ -62,7 +82,7 @@ class BudgetBuddyNotificationService : NotificationListenerService() {
         if (full.isBlank()) return
         if (BANK_PATTERNS.none { it.containsMatchIn(full) }) return
 
-        setPendingText(this, full)
+        addPendingText(this, full)
         postCaptureNotification(full)
     }
 
