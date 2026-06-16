@@ -12,6 +12,7 @@
     },
     "android": {
       "package": "com.budgetbuddy.app",
+      "versionCode": 3,
       "adaptiveIcon": {
         "backgroundColor": "#3B0764",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -53,6 +54,7 @@
           "androidSpeechServicePackages": ["com.google.android.googlequicksearchbox"]
         }
       ],
+      "./plugins/withNotificationListener",
       [
         "expo-share-intent",
         {

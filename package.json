@@ -10,6 +10,7 @@
     "@shopify/react-native-skia": "^2.6.3",
     "buffer": "^6.0.3",
     "expo": "~56.0.4",
+    "notification-listener": "file:./modules/notification-listener",
     "expo-build-properties": "^56.0.14",
     "expo-clipboard": "~56.0.3",
     "expo-constants": "~56.0.15",

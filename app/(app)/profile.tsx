@@ -4,7 +4,9 @@ import {
   Animated, Alert, ScrollView, Keyboard,
   Platform, Pressable, ActivityIndicator, Image,
 } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 import * as Linking from 'expo-linking';
+import * as NotificationListener from '@/modules/notification-listener/src';
 import * as Clipboard from 'expo-clipboard';
 import * as WebBrowser from 'expo-web-browser';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -37,6 +39,13 @@ export default function ProfileScreen() {
   const isDark = scheme === 'dark';
   const sheetBg = isDark ? '#111827' : 'white';
   const bio = useBiometricVault();
+
+  // ── Notification listener permission ─────────────────────────────────────
+  const [notifPermGranted, setNotifPermGranted] = useState(false);
+
+  useFocusEffect(useCallback(() => {
+    setNotifPermGranted(NotificationListener.isPermissionGranted());
+  }, []));
 
   // ── Donation / Support modals ─────────────────────────────────────────────
   const [donationVisible, setDonationVisible] = useState(false);
@@ -494,7 +503,47 @@ export default function ProfileScreen() {
           />
         </View>
 
-        {/* ── 4. Security section ─────────────────────────────────────────── */}
+        {/* ── 4. Automation section ───────────────────────────────────────── */}
+        <View className="mx-4 mb-4 bg-white dark:bg-gray-900 rounded-2xl shadow-sm overflow-hidden">
+          <View className="px-4 pt-4 pb-2">
+            <Text className="text-xs font-semibold text-gray-400 dark:text-gray-600 uppercase tracking-wider">
+              Automação
+            </Text>
+          </View>
+          <ActionRow
+            icon="notifications-outline"
+            iconColor="#F97316"
+            label="Captura de gastos por notificação"
+            subtitle={
+              notifPermGranted
+                ? 'Ativo — gastos bancários capturados automaticamente'
+                : 'Desativado — toque para habilitar'
+            }
+            onPress={() => {
+              if (notifPermGranted) {
+                Alert.alert(
+                  'Captura ativa',
+                  'O app já monitora notificações bancárias. Para desativar, vá em Configurações > Acesso às notificações.',
+                  [{ text: 'OK' }]
+                );
+              } else {
+                Alert.alert(
+                  'Habilitar captura automática',
+                  'O app abrirá as configurações do sistema. Encontre "Gestão Financeira" e ative o acesso às notificações.',
+                  [
+                    { text: 'Cancelar', style: 'cancel' },
+                    {
+                      text: 'Abrir configurações',
+                      onPress: () => NotificationListener.openPermissionSettings(),
+                    },
+                  ]
+                );
+              }
+            }}
+          />
+        </View>
+
+        {/* ── 5. Security section ─────────────────────────────────────────── */}
         <View className="mx-4 mb-4 bg-white dark:bg-gray-900 rounded-2xl shadow-sm overflow-hidden">
           <View className="px-4 pt-4 pb-2">
             <Text className="text-xs font-semibold text-gray-400 dark:text-gray-600 uppercase tracking-wider">
@@ -539,7 +588,7 @@ export default function ProfileScreen() {
           />
         </View>
 
-        {/* ── 5. Suporte ─────────────────────────────────────────────────── */}
+        {/* ── 6. Suporte ─────────────────────────────────────────────────── */}
         <View className="mx-4 mb-4 bg-white dark:bg-gray-900 rounded-2xl shadow-sm overflow-hidden">
           <View className="px-4 pt-4 pb-2">
             <Text className="text-xs font-semibold text-gray-400 dark:text-gray-600 uppercase tracking-wider">
@@ -567,7 +616,7 @@ export default function ProfileScreen() {
           )}
         </View>
 
-        {/* ── 6. Account section ─────────────────────────────────────────── */}
+        {/* ── 7. Account section ─────────────────────────────────────────── */}
         <View className="mx-4 mb-4 bg-white dark:bg-gray-900 rounded-2xl shadow-sm overflow-hidden">
           <View className="px-4 pt-4 pb-2">
             <Text className="text-xs font-semibold text-gray-400 dark:text-gray-600 uppercase tracking-wider">
@@ -585,7 +634,7 @@ export default function ProfileScreen() {
           />
         </View>
 
-        {/* ── 7. About section ───────────────────────────────────────────── */}
+        {/* ── 8. About section ───────────────────────────────────────────── */}
         <View className="mx-4 mb-4 bg-white dark:bg-gray-900 rounded-2xl shadow-sm overflow-hidden">
           <View className="px-4 pt-4 pb-2">
             <Text className="text-xs font-semibold text-gray-400 dark:text-gray-600 uppercase tracking-wider">

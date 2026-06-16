@@ -1,28 +1,13 @@
-import { useEffect } from 'react';
 import { View, ActivityIndicator } from 'react-native';
-import { Redirect, useRouter } from 'expo-router';
-import { useShareIntent } from 'expo-share-intent';
+import { Redirect } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useVault } from '@/contexts/VaultContext';
 
+// Share intents (ACTION_SEND) are handled by <ShareIntentRouter> at the root,
+// which survives the redirect to the unlock screen. See components/ShareIntentRouter.tsx.
 export default function Index() {
   const { user, restoring } = useAuth();
   const { status } = useVault();
-  const router = useRouter();
-  const { hasShareIntent, shareIntent, resetShareIntent } = useShareIntent();
-
-  // Forward share intent text to expenses screen once vault is unlocked
-  useEffect(() => {
-    if (!hasShareIntent || status !== 'unlocked') return;
-    const text = shareIntent.text ?? shareIntent.webUrl ?? '';
-    if (text) {
-      router.replace({
-        pathname: '/(app)/expenses',
-        params: { shareText: text },
-      });
-      resetShareIntent();
-    }
-  }, [hasShareIntent, status, shareIntent, router, resetShareIntent]);
 
   // 1. Wait for Google silent sign-in to finish
   if (restoring) {

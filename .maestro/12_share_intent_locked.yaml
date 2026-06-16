@@ -1,0 +1,60 @@
+appId: com.budgetbuddy.app
+name: "12 - Share intent com cofre bloqueado"
+---
+# ┌─────────────────────────────────────────────────────────────────────────┐
+# │ PRÉ-REQUISITO — injetar o compartilhamento via adb                       │
+# │                                                                          │
+# │ O Maestro OSS não emite ACTION_SEND, então o share é entregue por adb    │
+# │ ANTES deste flow. Isto abre o app a frio com o texto pendente, caindo    │
+# │ na tela "Desbloquear Cofre" (cofre bloqueado = o caso que estava quebrado│
+# │ e que o README anuncia: "receba uma notificação do banco → Compartilhar")│
+# │                                                                          │
+# │   adb shell am start -a android.intent.action.SEND -t text/plain \       │
+# │     --es android.intent.extra.TEXT \                                     │
+# │     "Compra aprovada R$ 45,90 PADARIA DOCE PAO 31/05" \                  │
+# │     com.budgetbuddy.app                                                   │
+# │                                                                          │
+# │ Depois: maestro test -e VAULT_PASSWORD=... .maestro/12_share_intent_…    │
+# └─────────────────────────────────────────────────────────────────────────┘
+
+- launchApp:
+    stopApp: false
+
+- waitForAnimationToEnd
+
+# Reconecta se caiu no Dev Launcher
+- runFlow:
+    when:
+      visible: "Development Build"
+    commands:
+      - tapOn:
+          text: "Gestão Financeira"
+          index: 1
+      - extendedWaitUntil:
+          visible:
+            text: "Desbloquear Cofre|Início|Olá,"
+          timeout: 30000
+
+# Cofre bloqueado → desbloqueia
+- runFlow:
+    when:
+      visible: "Desbloquear Cofre"
+    commands:
+      - tapOn:
+          id: "vault-password-input"
+      - inputText: "${VAULT_PASSWORD}"
+      - tapOn: "Desbloquear"
+
+# ═══════════════════════ O CORAÇÃO DO TESTE ═══════════════════════
+# Após o unlock, o texto compartilhado deve abrir o sheet de gasto
+# já pré-preenchido no modo texto.
+#   ANTES do fix: cai no dashboard e o texto se perde → estes passos falham.
+#   DEPOIS do fix: o formulário abre com o texto do banco.
+- extendedWaitUntil:
+    visible: "Conte o que aconteceu"
+    timeout: 15000
+
+- assertVisible: "PADARIA"
+# JSON cru / crashes nunca devem aparecer
+- assertNotVisible: "Couldn't find a navigation context"
+- assertNotVisible: "Something went wrong"
