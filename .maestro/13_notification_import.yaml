@@ -1,0 +1,65 @@
+appId: com.budgetbuddy.app
+name: "13 - Captura de notificação bancária (NotificationListenerService)"
+---
+# ┌──────────────────────────────────────────────────────────────────────────┐
+# │ PRÉ-REQUISITO — injetar notificação pendente via adb (debug build)        │
+# │                                                                           │
+# │ O NotificationListenerService não pode ser disparado pelo Maestro.        │
+# │ Simulamos escrevendo no SharedPreferences do app antes de abrir:          │
+# │                                                                           │
+# │   adb shell run-as com.budgetbuddy.app sh -c \                            │
+# │     "mkdir -p /data/data/com.budgetbuddy.app/shared_prefs && \            │
+# │      printf '<?xml version='\''1.0'\'' encoding='\''utf-8'\'' \           │
+# │      standalone='\''yes'\'' ?>\n<map>\n<string \                          │
+# │      name='\''pending_text'\''>Compra aprovada R$ 78,50 \                 │
+# │      SUPERMERCADO BOM PRECO</string>\n</map>' \                           │
+# │      > /data/data/com.budgetbuddy.app/shared_prefs/budget_buddy_notif.xml"│
+# │                                                                           │
+# │ Depois: maestro test -e VAULT_PASSWORD=... .maestro/13_notification_…     │
+# └──────────────────────────────────────────────────────────────────────────┘
+
+- launchApp:
+    stopApp: true
+
+- waitForAnimationToEnd
+
+# Reconecta se caiu no Dev Launcher
+- runFlow:
+    when:
+      visible: "Development Build"
+    commands:
+      - tapOn:
+          text: "Gestão Financeira"
+          index: 1
+      - extendedWaitUntil:
+          visible:
+            text: "Desbloquear Cofre|Início|Olá,"
+          timeout: 30000
+
+# Cofre bloqueado → desbloqueia por senha
+- runFlow:
+    when:
+      visible: "Desbloquear Cofre"
+    commands:
+      - tapOn:
+          id: "vault-password-input"
+      - inputText: "${VAULT_PASSWORD}"
+      - tapOn: "Desbloquear"
+
+# ═══════════════════════ O CORAÇÃO DO TESTE ═══════════════════════
+# Após o unlock, o NotificationImportRouter detecta a notificação
+# pendente e exibe um Alert.alert nativo com "Gasto capturado".
+# O utilizador confirma tocando em "Importar" para abrir o sheet.
+- extendedWaitUntil:
+    visible: "Gasto capturado"
+    timeout: 15000
+
+- tapOn: "Importar"
+
+- extendedWaitUntil:
+    visible: "Conte o que aconteceu"
+    timeout: 10000
+
+- assertVisible: "SUPERMERCADO"
+- assertNotVisible: "Couldn't find a navigation context"
+- assertNotVisible: "Something went wrong"
