@@ -289,12 +289,6 @@ export default function ProfileScreen() {
     Linking.openURL(GEMINI_KEY_URL);
   }, []);
 
-  const handleOpenPrivacyPolicy = useCallback(() => {
-    if (hasPrivacyPolicyUrl) {
-      Linking.openURL(PRIVACY_POLICY_URL);
-    }
-  }, []);
-
   // ── Biometric handlers ───────────────────────────────────────────────────
   const openBioModal = useCallback(() => {
     setBioPassword('');
@@ -602,18 +596,6 @@ export default function ProfileScreen() {
             subtitle="Reportar bug ou enviar sugestão"
             onPress={() => setSupportVisible(true)}
           />
-          {hasPrivacyPolicyUrl && (
-            <>
-              <View className="mx-4 h-px bg-gray-100 dark:bg-gray-800" />
-              <ActionRow
-                icon="shield-checkmark-outline"
-                iconColor="#10B981"
-                label="Politica de Privacidade"
-                subtitle="Abrir a pagina publicada"
-                onPress={handleOpenPrivacyPolicy}
-              />
-            </>
-          )}
         </View>
 
         {/* ── 7. Account section ─────────────────────────────────────────── */}
