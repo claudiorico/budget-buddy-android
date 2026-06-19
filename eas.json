@@ -16,6 +16,15 @@
       "env": {
         "EXPO_PUBLIC_PRIVACY_POLICY_URL": "https://jolly-meadow-3f54.claudiorico81.workers.dev/"
       }
+    },
+    "production-apk": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_PRIVACY_POLICY_URL": "https://jolly-meadow-3f54.claudiorico81.workers.dev/"
+      }
     }
   },
   "submit": {
