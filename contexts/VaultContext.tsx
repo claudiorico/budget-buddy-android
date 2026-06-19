@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { AppState } from 'react-native';
 import { useAuth } from './AuthContext';
 import {
   deriveMasterKey, deriveSubKey, deriveRecoveryKey,
@@ -155,6 +156,15 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     bumpDek();
     setStatus(prev => (prev === 'unlocked' ? 'locked' : prev));
   }, []);
+
+  // ── Auto-lock on background (screen off / app switch) ──────────────────────
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next === 'background') lockVault();
+    });
+    return () => sub.remove();
+  }, [lockVault]);
 
   // ── recoverVault ───────────────────────────────────────────────────────────
 

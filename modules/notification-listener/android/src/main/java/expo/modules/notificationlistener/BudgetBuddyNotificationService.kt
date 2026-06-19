@@ -30,10 +30,10 @@ class BudgetBuddyNotificationService : NotificationListenerService() {
 
         // Patterns that suggest a bank expense notification in Brazilian Portuguese
         private val BANK_PATTERNS = listOf(
-            Regex("""R\$\s*\d"""),
+            Regex("R\\$[\\s\\u00A0\\u202F]*\\d"),  // espaço normal, NBSP e narrow NBSP
             Regex("compra aprovada", RegexOption.IGNORE_CASE),
             Regex("pagamento.*aprovado", RegexOption.IGNORE_CASE),
-            Regex("pix.*enviado", RegexOption.IGNORE_CASE),
+            Regex("pix", RegexOption.IGNORE_CASE),
             Regex("débito.*realizado", RegexOption.IGNORE_CASE),
             Regex("transação.*aprovada", RegexOption.IGNORE_CASE),
             Regex("compra.*crédito", RegexOption.IGNORE_CASE),
