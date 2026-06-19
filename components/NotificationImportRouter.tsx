@@ -9,8 +9,7 @@ import * as NotificationListener from '@/modules/notification-listener/src';
  * captured by BudgetBuddyNotificationService and stored in SharedPreferences.
  *
  * Checks on mount and whenever the app returns to foreground. Forwards the
- * pending text to the expenses form only after the vault is unlocked — same
- * vault-lock-aware pattern as ShareIntentRouter.
+ * pending text to the expenses form only after the vault is unlocked.
  */
 export function NotificationImportRouter() {
   const router = useRouter();

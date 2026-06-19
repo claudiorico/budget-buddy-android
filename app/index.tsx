@@ -3,8 +3,6 @@ import { Redirect } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useVault } from '@/contexts/VaultContext';
 
-// Share intents (ACTION_SEND) are handled by <ShareIntentRouter> at the root,
-// which survives the redirect to the unlock screen. See components/ShareIntentRouter.tsx.
 export default function Index() {
   const { user, restoring } = useAuth();
   const { status } = useVault();

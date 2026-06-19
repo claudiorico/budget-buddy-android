@@ -35,10 +35,9 @@ Tudo passa direto entre o app e a sua conta Google. Não armazenamos nada em ser
 • Padrão BIP-39 para chave de recuperação de 12 palavras
 
 ✦ ENTRADA INTELIGENTE POR IA
-Adicione gastos de 4 formas:
+Adicione gastos de 3 formas:
 • Voz — "café 8 reais hoje" e pronto
 • Texto livre — IA extrai descrição, valor, data e categoria
-• Compartilhar — recebeu notificação do banco? Compartilhe pro app
 • Manual — formulário tradicional para quando preferir
 
 A IA usa Google Gemini com SUA chave gratuita (free tier do AI Studio cobre uso pessoal). Você fica no controle.

@@ -69,10 +69,10 @@ A transcrição **resultante** (texto puro) é então enviada para a **API do Go
 O áudio em si **não é armazenado** pelo app. Os termos de uso e privacidade do Google se aplicam ao reconhecimento de voz e ao Gemini.
 
 ### 3.3. Reconhecimento de texto pela IA (opcional)
-Quando você usa "Descrever em texto" ou "Compartilhar", o texto digitado/compartilhado é enviado para a **API do Google Gemini** (com sua chave) para extrair: descrição, valor, data e categoria sugerida. **Apenas o texto que você forneceu** é enviado — nenhum outro dado do seu app vai junto.
+Quando você usa "Descrever em texto", o texto digitado é enviado para a **API do Google Gemini** (com sua chave) para extrair: descrição, valor, data e categoria sugerida. **Apenas o texto que você forneceu** é enviado — nenhum outro dado do seu app vai junto.
 
 ### 3.4. Mensagens de suporte
-Quando você usa "Contato e suporte", a mensagem é enviada via **EmailJS** (serviço de terceiros) direto para a caixa de email do desenvolvedor. **Não enviamos** seu email pessoal, nome, ou qualquer identificador junto. Apenas: o tipo (Erro/Sugestão/Elogio), sua mensagem, a versão do app e a versão do Android.
+Quando você usa "Contato e suporte", o app abre o aplicativo de email do seu dispositivo com destinatário, assunto e mensagem preenchidos. O envio acontece pelo seu próprio app de email.
 
 Termos do EmailJS: [emailjs.com/legal/terms-of-service](https://www.emailjs.com/legal/terms-of-service).
 
@@ -87,8 +87,8 @@ O app **não compartilha** seus dados financeiros com ninguém. Os únicos terce
 |---------|--------------|---------|
 | **Google** (Drive API, Sign-In) | Arquivos criptografados (que ele não consegue descriptografar) e dados básicos do seu perfil Google | Autenticação e armazenamento |
 | **Google** (Speech-to-Text, opcional) | Áudio da sua fala quando você usa o microfone | Transcrever áudio em texto |
-| **Google** (Gemini API, opcional) | Texto que você digitou/falou/compartilhou, com sua própria chave de API | Extrair campos do gasto |
-| **EmailJS** (somente quando você usa "Contato") | Conteúdo da mensagem de suporte | Encaminhar para o desenvolvedor |
+| **Google** (Gemini API, opcional) | Texto que você digitou/falou, com sua própria chave de API | Extrair campos do gasto |
+| **App de email do usuário** (somente quando você usa "Contato") | Conteúdo da mensagem de suporte | Enviar a mensagem para o desenvolvedor |
 
 **Não temos servidor próprio.** Não há banco de dados do desenvolvedor armazenando nada seu.
 
@@ -99,9 +99,7 @@ O app pede:
 - **Internet** — para falar com Google Drive e Gemini API
 - **Microfone** — apenas quando você usa "Ditar gasto por voz" (opcional)
 - **Biometria** — apenas quando você ativa "Desbloqueio por digital" (opcional)
-- **Receber compartilhamentos de texto** — para a funcionalidade "Compartilhar" de outros apps
-
-Não pedimos: localização, contatos, câmera, SMS, ligações, armazenamento externo, ou qualquer outra permissão sensível.
+Não pedimos: localização, contatos, câmera, SMS, ligações, armazenamento externo, receber compartilhamentos de outros apps, ou qualquer outra permissão sensível.
 
 ## 6. Crianças
 

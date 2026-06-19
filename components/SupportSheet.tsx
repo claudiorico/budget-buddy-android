@@ -11,8 +11,6 @@ import * as Clipboard from 'expo-clipboard';
 import Constants from 'expo-constants';
 import {
   SUPPORT_EMAIL, APP_NAME,
-  EMAILJS_ENDPOINT, EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID,
-  EMAILJS_PUBLIC_KEY, EMAILJS_PRIVATE_KEY,
 } from '@/lib/contact';
 
 type Subject = 'erro' | 'sugestao' | 'elogio';
@@ -112,48 +110,6 @@ export function SupportSheet({ visible, onClose }: Props) {
     const subjectMeta = validate();
     if (!subjectMeta) return;
     setSending(true);
-    try {
-      const res = await fetch(EMAILJS_ENDPOINT, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          service_id: EMAILJS_SERVICE_ID,
-          template_id: EMAILJS_TEMPLATE_ID,
-          user_id: EMAILJS_PUBLIC_KEY,
-          accessToken: EMAILJS_PRIVATE_KEY,
-          template_params: {
-            subject: `[${APP_NAME}] ${subjectMeta.label}`,
-            message: buildBody(),
-            from_name: `Usuário do ${APP_NAME}`,
-          },
-        }),
-      });
-      // EmailJS retorna "OK" como texto plano em sucesso, JSON em erro
-      if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(errText || `HTTP ${res.status}`);
-      }
-      animateClose();
-      // Pequeno delay pra animação fechar antes do alert (UX)
-      setTimeout(() => {
-        Alert.alert('Mensagem enviada', 'Obrigado pelo contato!');
-      }, 250);
-    } catch (e) {
-      Alert.alert(
-        'Falha no envio',
-        `Não foi possível enviar a mensagem. Tente usar o app de email pelo botão abaixo.\n\nErro: ${(e as Error).message}`,
-      );
-    } finally {
-      setSending(false);
-    }
-  }, [validate, buildBody, animateClose]);
-
-  /** Fallback: abre o app de email do user com tudo pré-preenchido. */
-  const handleEmailFallback = useCallback(async () => {
-    const subjectMeta = validate();
-    if (!subjectMeta) return;
     const url = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(
       `[${APP_NAME}] ${subjectMeta.label}`,
     )}&body=${encodeURIComponent(buildBody())}`;
@@ -166,6 +122,8 @@ export function SupportSheet({ visible, onClose }: Props) {
         'Sem app de email',
         `Nenhum app de email foi encontrado. O endereço ${SUPPORT_EMAIL} foi copiado pra área de transferência.`,
       );
+    } finally {
+      setSending(false);
     }
   }, [validate, buildBody, animateClose]);
 
@@ -283,20 +241,7 @@ export function SupportSheet({ visible, onClose }: Props) {
             >
               <Ionicons name="send" size={16} color="white" />
               <Text className="text-white font-semibold text-sm">
-                {sending ? 'Enviando...' : 'Enviar'}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              testID="support-mailto-btn"
-              onPress={handleEmailFallback}
-              disabled={sending}
-              activeOpacity={0.85}
-              className="rounded-xl py-3 flex-row items-center justify-center gap-2 border border-gray-200 dark:border-gray-700"
-            >
-              <Ionicons name="mail-outline" size={16} color={isDark ? '#9CA3AF' : '#6B7280'} />
-              <Text className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                Ou abrir no app de email
+                {sending ? 'Abrindo...' : 'Abrir no app de email'}
               </Text>
             </TouchableOpacity>
 
