@@ -11,7 +11,7 @@
       "supportsTablet": true
     },
     "android": {
-      "package": "com.budgetbuddy.app",
+      "package": "br.com.claudiorico.gestaofinanceira",
       "versionCode": 3,
       "adaptiveIcon": {
         "backgroundColor": "#3B0764",

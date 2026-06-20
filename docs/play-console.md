@@ -169,7 +169,7 @@ Antes de submeter, **cadastrar SHA-1 do keystore EAS** no Google Cloud Console:
 3. https://console.cloud.google.com/apis/credentials → projeto que tem o Web Client ID `849799119137-3susk1bcec9d5iukk8h2fpd5due5i8ne...`
 4. "+ CREATE CREDENTIALS" → "OAuth client ID" → Application type: **Android**
    - Name: `Gestão de Gastos Production`
-   - Package name: `com.budgetbuddy.app`
+   - Package name: `br.com.claudiorico.gestaofinanceira`
    - SHA-1: cola do EAS
 
 ---
