@@ -14,7 +14,7 @@
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_PRIVACY_POLICY_URL": "https://jolly-meadow-3f54.claudiorico81.workers.dev/"
+        "EXPO_PUBLIC_PRIVACY_POLICY_URL": "https://jolly-meadow-3f54.claudiorico81.workers.dev/privacy-policy.html"
       }
     },
     "production-apk": {
@@ -24,7 +24,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_PRIVACY_POLICY_URL": "https://jolly-meadow-3f54.claudiorico81.workers.dev/"
+        "EXPO_PUBLIC_PRIVACY_POLICY_URL": "https://jolly-meadow-3f54.claudiorico81.workers.dev/privacy-policy.html"
       }
     }
   },

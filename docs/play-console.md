@@ -87,7 +87,7 @@ gestaodegastosapp@gmail.com
 ```
 https://jolly-meadow-3f54.claudiorico81.workers.dev/
 ```
-*(Pode ser a própria Privacy Policy enquanto não tem landing page)*
+*(Landing page pública do app)*
 
 ---
 
@@ -127,7 +127,7 @@ Resultado esperado: **Livre / Everyone (3+)**.
 
 - ✅ **Dados criptografados em trânsito** (HTTPS)
 - ✅ **Dados criptografados em repouso** (AES-256-GCM antes do upload)
-- ✅ **Usuário pode pedir exclusão de dados** (revogar acesso ao Drive deleta tudo)
+- ✅ **Usuário pode excluir os próprios dados** pelo app (Perfil → Segurança → Apagar cofre e dados) ou revogando o acesso ao Drive
 - ✅ **Dados não vendidos a terceiros**
 - ✅ **Independent security review**: Não (mas o código é open-source observável)
 
@@ -153,7 +153,7 @@ Resultado esperado: **Livre / Everyone (3+)**.
 
 URL pública:
 ```
-https://jolly-meadow-3f54.claudiorico81.workers.dev/
+https://jolly-meadow-3f54.claudiorico81.workers.dev/privacy-policy.html
 ```
 
 Conteúdo já hospedado, cobre tudo que o app coleta e como.

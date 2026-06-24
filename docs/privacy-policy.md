@@ -121,9 +121,10 @@ Detalhes técnicos sobre criptografia, armazenamento e permissões estão resumi
 Você pode, a qualquer momento:
 
 1. **Visualizar todos os seus dados** baixando os arquivos `.json` da pasta `appDataFolder` do seu Drive (com ferramentas que aceitem essa pasta especial).
-2. **Apagar tudo** — vá em Perfil → Sair da conta, e depois em [drive.google.com/drive/u/0/settings](https://drive.google.com/drive/u/0/settings) → Gerenciar apps → Remover acesso do "Gestão de Gastos". Os arquivos `appDataFolder` serão deletados pelo próprio Google.
-3. **Exportar** — funcionalidade não implementada na v1.0. Os dados estão no seu Drive criptografados; sem a senha do cofre, **nem nós nem o Google conseguem ler**.
-4. **Reclamar** — entre em contato em [gestaodegastosapp@gmail.com](mailto:gestaodegastosapp@gmail.com) ou diretamente pelo app em Perfil → Contato e suporte.
+2. **Apagar pelo app** — vá em Perfil → Segurança → Apagar cofre e dados. Essa ação apaga do Google Drive os arquivos do app: cofre, gastos, categorias e metas.
+3. **Apagar pelo Google Drive** — alternativamente, vá em Perfil → Sair da conta, e depois em [drive.google.com/drive/u/0/settings](https://drive.google.com/drive/u/0/settings) → Gerenciar apps → Remover acesso do "Gestão de Gastos". Os arquivos `appDataFolder` serão deletados pelo próprio Google.
+4. **Exportar** — funcionalidade não implementada na v1.0. Os dados estão no seu Drive criptografados; sem a senha do cofre, **nem nós nem o Google conseguem ler**.
+5. **Reclamar** — entre em contato em [gestaodegastosapp@gmail.com](mailto:gestaodegastosapp@gmail.com) ou diretamente pelo app em Perfil → Contato e suporte.
 
 ## 9. Mudanças nesta política
 
