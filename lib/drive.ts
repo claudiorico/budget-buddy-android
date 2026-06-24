@@ -94,6 +94,14 @@ export async function deleteFile(token: string, fileId: string): Promise<void> {
   if (!res.ok && res.status !== 204) throw new DriveError('delete', res.status);
 }
 
+export async function deleteAllAppDataFiles(token: string): Promise<void> {
+  const files = await listAppDataFiles(token);
+  await Promise.all(files.map(file => deleteFile(token, file.id)));
+  for (const file of files) {
+    storage.remove(cacheKey(file.name));
+  }
+}
+
 // High-level helpers — use MMKV ID cache, create or update as needed
 
 function cacheKey(name: string) {

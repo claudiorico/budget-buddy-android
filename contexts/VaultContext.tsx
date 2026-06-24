@@ -33,6 +33,8 @@ type VaultContextType = {
   lockVault: () => void;
   recoverVault: (mnemonic: string, newPassword: string) => Promise<boolean>;
   regenerateRecoveryKey: (password: string) => Promise<string | null>;
+  deleteVaultAndDriveData: () => Promise<void>;
+  setAutoLockPaused: (paused: boolean) => void;
 };
 
 // ── Context ──────────────────────────────────────────────────────────────────
@@ -53,6 +55,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<VaultStatus>('loading');
   const [vaultDoc, setVaultDoc] = useState<VaultDoc | null>(null);
   const [dekVersion, setDekVersion] = useState(0);
+  const [autoLockPaused, setAutoLockPaused] = useState(false);
 
   const bumpDek = () => setDekVersion(v => v + 1);
 
@@ -161,10 +164,10 @@ export function VaultProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', (next) => {
-      if (next === 'background') lockVault();
+      if (next === 'background' && !autoLockPaused) lockVault();
     });
     return () => sub.remove();
-  }, [lockVault]);
+  }, [lockVault, autoLockPaused]);
 
   // ── recoverVault ───────────────────────────────────────────────────────────
 
@@ -245,6 +248,18 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     }
   }, [vaultDoc, user, getAccessToken]);
 
+  const deleteVaultAndDriveData = useCallback(async (): Promise<void> => {
+    if (!user) throw new Error('Not authenticated');
+
+    const token = await getAccessToken();
+    await drive.deleteAllAppDataFiles(token);
+
+    clearDek();
+    bumpDek();
+    setVaultDoc(null);
+    setStatus('setup_needed');
+  }, [user, getAccessToken]);
+
   // ─────────────────────────────────────────────────────────────────────────
 
   return (
@@ -257,6 +272,8 @@ export function VaultProvider({ children }: { children: ReactNode }) {
       lockVault,
       recoverVault,
       regenerateRecoveryKey,
+      deleteVaultAndDriveData,
+      setAutoLockPaused,
     }}>
       {children}
     </VaultContext.Provider>

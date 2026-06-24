@@ -33,7 +33,7 @@ type AiTestState = 'idle' | 'testing' | 'ok' | 'error';
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { user, signOut } = useAuth();
-  const { lockVault, regenerateRecoveryKey, unlockVault } = useVault();
+  const { lockVault, regenerateRecoveryKey, unlockVault, deleteVaultAndDriveData } = useVault();
   const { apiKey, hasKey, setApiKey, clearKey } = useGeminiKey();
   const { preference: themePref, setPreference: setThemePref, scheme } = useTheme();
   const isDark = scheme === 'dark';
@@ -217,6 +217,42 @@ export default function ProfileScreen() {
       ],
     );
   }, [lockVault, signOut]);
+
+  const handleDeleteVaultAndData = useCallback(() => {
+    Alert.alert(
+      'Apagar cofre e dados?',
+      'Isso vai apagar do Google Drive todos os arquivos do app: cofre, gastos, categorias e metas. Esta ação não pode ser desfeita.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Continuar',
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert(
+              'Confirmar exclusão definitiva',
+              'Depois de apagar, você precisará criar um novo cofre. Se não tiver backup externo, os dados atuais serão perdidos.',
+              [
+                { text: 'Cancelar', style: 'cancel' },
+                {
+                  text: 'Apagar tudo',
+                  style: 'destructive',
+                  onPress: async () => {
+                    try {
+                      await bio.disable();
+                      await deleteVaultAndDriveData();
+                      Alert.alert('Dados apagados', 'Seu cofre e os dados do app foram removidos do Google Drive.');
+                    } catch {
+                      Alert.alert('Erro', 'Não foi possível apagar os dados. Verifique sua conexão e tente novamente.');
+                    }
+                  },
+                },
+              ],
+            );
+          },
+        },
+      ],
+    );
+  }, [bio, deleteVaultAndDriveData]);
 
   // ── Lock vault ─────────────────────────────────────────────────────────────
   const handleLock = useCallback(() => {
@@ -579,6 +615,17 @@ export default function ProfileScreen() {
             label="Regenerar chave de recuperação"
             subtitle="Cria uma nova frase de 12 palavras"
             onPress={openModal}
+          />
+
+          <View className="mx-4 h-px bg-gray-100 dark:bg-gray-800" />
+
+          <ActionRow
+            icon="trash-outline"
+            iconColor="#EF4444"
+            label="Apagar cofre e dados"
+            subtitle="Remove os arquivos do app no Google Drive"
+            onPress={handleDeleteVaultAndData}
+            destructive
           />
         </View>
 

@@ -152,8 +152,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
   // Re-fetch when vault unlocks or year changes
   useEffect(() => {
     if (status === 'unlocked') fetchAll(selectedYear);
-    if (status === 'locked' || status === 'loading') {
+    if (status !== 'unlocked') {
       setExpenses([]);
+      setCategories([]);
+      setGoals([]);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, dekVersion, selectedYear]);

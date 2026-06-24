@@ -13,6 +13,7 @@ import { useColorScheme } from 'nativewind';
 import { parseExpenseFromText, MissingApiKeyError, type ExpenseDraft } from '@/lib/ai';
 import { useGeminiKey } from '@/hooks/useGeminiKey';
 import type { Category } from '@/contexts/DataContext';
+import { useVault } from '@/contexts/VaultContext';
 
 type InputStage = 'choose' | 'voice' | 'text';
 
@@ -30,6 +31,7 @@ export function ExpenseInputSheet({
 }: Props) {
   const insets = useSafeAreaInsets();
   const { hasKey, loading: keyLoading } = useGeminiKey();
+  const { setAutoLockPaused } = useVault();
   const { colorScheme } = useColorScheme();
   const sheetBg = colorScheme === 'dark' ? '#111827' : 'white';
 
@@ -46,10 +48,17 @@ export function ExpenseInputSheet({
   useSpeechRecognitionEvent('result', (event) => {
     const transcript = event.results[0]?.transcript ?? '';
     setVoiceText(transcript);
+    if (event.isFinal) {
+      ExpoSpeechRecognitionModule.stop();
+    }
   });
-  useSpeechRecognitionEvent('end', () => setRecording(false));
+  useSpeechRecognitionEvent('end', () => {
+    setRecording(false);
+    setAutoLockPaused(false);
+  });
   useSpeechRecognitionEvent('error', (event) => {
     setRecording(false);
+    setAutoLockPaused(false);
     if (event.error !== 'no-speech') {
       Alert.alert('Erro no reconhecimento', event.message || event.error);
     }
@@ -98,14 +107,22 @@ export function ExpenseInputSheet({
     return () => { onShow.remove(); onHide.remove(); };
   }, [visible, kbOffset]);
 
+  useEffect(() => {
+    if (visible || !recording) return;
+    ExpoSpeechRecognitionModule.stop();
+    setRecording(false);
+    setAutoLockPaused(false);
+  }, [visible, recording, setAutoLockPaused]);
+
   const animateClose = useCallback((after: () => void) => {
     Keyboard.dismiss();
     if (recording) ExpoSpeechRecognitionModule.stop();
+    setAutoLockPaused(false);
     kbOffset.setValue(0);
     Animated.timing(slideAnim, {
       toValue: 500, duration: 220, useNativeDriver: true,
     }).start(() => after());
-  }, [slideAnim, kbOffset, recording]);
+  }, [slideAnim, kbOffset, recording, setAutoLockPaused]);
 
   const handleClose = useCallback(() => animateClose(onCancel), [animateClose, onCancel]);
   const handleManual = useCallback(() => animateClose(onManual), [animateClose, onManual]);
@@ -149,13 +166,17 @@ export function ExpenseInputSheet({
         return;
       }
       setVoiceText('');
+      setAutoLockPaused(true);
       setRecording(true);
       ExpoSpeechRecognitionModule.start({
         lang: 'pt-BR',
         interimResults: true,
-        continuous: true,
+        continuous: false,
         addsPunctuation: true,
         requiresOnDeviceRecognition: false,
+        androidIntentOptions: {
+          EXTRA_LANGUAGE_MODEL: 'web_search',
+        },
         contextualStrings: [
           // Unidades monetárias e marcadores temporais
           'reais', 'real', 'centavos', 'dólares', 'dólar',
@@ -169,13 +190,15 @@ export function ExpenseInputSheet({
       });
     } catch (e) {
       setRecording(false);
+      setAutoLockPaused(false);
       Alert.alert('Erro', (e as Error).message);
     }
-  }, [categories]);
+  }, [categories, setAutoLockPaused]);
 
   const stopVoice = useCallback(() => {
     if (recording) ExpoSpeechRecognitionModule.stop();
-  }, [recording]);
+    setAutoLockPaused(false);
+  }, [recording, setAutoLockPaused]);
 
   const confirmVoice = useCallback(() => {
     handleParse(voiceText);
