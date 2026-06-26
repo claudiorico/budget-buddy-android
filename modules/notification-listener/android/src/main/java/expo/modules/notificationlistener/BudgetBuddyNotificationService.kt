@@ -22,21 +22,38 @@ class BudgetBuddyNotificationService : NotificationListenerService() {
 
         private val BANK_PACKAGES = setOf(
             "com.nu.production",                     // Nubank
+            "com.itau",                              // Itaú
+            "com.itau.pers",                         // Itaú (variações)
             "com.bradesco",                          // Bradesco
+            "br.com.bradesco.next",                  // next
             "com.santander.app",                     // Santander
+            "br.com.bb.android",                     // Banco do Brasil
+            "br.com.intermedium",                    // Inter
+            "br.com.c6bank.app",                     // C6 Bank
+            "br.com.original.bank",                  // Banco Original
+            "br.com.neon",                           // Neon
+            "br.com.bancopan.cartoes",               // Banco PAN
+            "br.gov.caixa.tem",                      // Caixa Tem
+            "br.com.gabba.Caixa",                    // Caixa
+            "com.mercadopago.wallet",                // Mercado Pago
+            "com.picpay",                            // PicPay
+            "com.paypal.android.p2pmobile",          // PayPal
             "com.samsung.android.spay",              // Samsung Pay
             "com.google.android.apps.walletnfcrel",  // Google Wallet
         )
 
-        // Patterns that suggest a bank expense notification in Brazilian Portuguese
+        // Patterns that suggest a bank expense notification in Brazilian Portuguese.
+        // Unicode escapes keep accented words stable even if a tool changes file encoding.
         private val BANK_PATTERNS = listOf(
-            Regex("R\\$[\\s\\u00A0\\u202F]*\\d"),  // espaço normal, NBSP e narrow NBSP
+            Regex("R\\$[\\s\\u00A0\\u202F]*\\d"), // normal space, NBSP and narrow NBSP
             Regex("compra aprovada", RegexOption.IGNORE_CASE),
             Regex("pagamento.*aprovado", RegexOption.IGNORE_CASE),
+            Regex("pagamento.*realizado", RegexOption.IGNORE_CASE),
             Regex("pix", RegexOption.IGNORE_CASE),
-            Regex("débito.*realizado", RegexOption.IGNORE_CASE),
-            Regex("transação.*aprovada", RegexOption.IGNORE_CASE),
-            Regex("compra.*crédito", RegexOption.IGNORE_CASE),
+            Regex("d\\u00E9bito.*realizado", RegexOption.IGNORE_CASE),
+            Regex("transa\\u00E7\\u00E3o.*aprovada", RegexOption.IGNORE_CASE),
+            Regex("compra.*cr\\u00E9dito", RegexOption.IGNORE_CASE),
+            Regex("cart\\u00E3o", RegexOption.IGNORE_CASE),
         )
 
         private fun prefs(context: Context) =
@@ -49,7 +66,7 @@ class BudgetBuddyNotificationService : NotificationListenerService() {
         }
 
         fun addPendingText(context: Context, text: String) {
-            val queue = (getPendingQueue(context) + text).takeLast(MAX_QUEUE_SIZE)
+            val queue = (getPendingQueue(context).filterNot { it == text } + text).takeLast(MAX_QUEUE_SIZE)
             saveQueue(context, queue)
         }
 
@@ -72,12 +89,21 @@ class BudgetBuddyNotificationService : NotificationListenerService() {
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         sbn ?: return
-        if (sbn.packageName !in BANK_PACKAGES) return  // only whitelisted banks
+        if (sbn.packageName !in BANK_PACKAGES) return
 
         val extras = sbn.notification?.extras ?: return
-        val title = extras.getCharSequence("android.title")?.toString() ?: ""
-        val text = extras.getCharSequence("android.text")?.toString() ?: ""
-        val full = "$title $text".trim()
+        val full = listOf(
+            extras.getCharSequence("android.title")?.toString(),
+            extras.getCharSequence("android.text")?.toString(),
+            extras.getCharSequence("android.bigText")?.toString(),
+            extras.getCharSequence("android.subText")?.toString(),
+            extras.getCharSequence("android.summaryText")?.toString(),
+            extras.getCharSequenceArray("android.textLines")?.joinToString(" "),
+        )
+            .filterNotNull()
+            .joinToString(" ")
+            .replace(Regex("\\s+"), " ")
+            .trim()
 
         if (full.isBlank()) return
         if (BANK_PATTERNS.none { it.containsMatchIn(full) }) return
@@ -89,7 +115,7 @@ class BudgetBuddyNotificationService : NotificationListenerService() {
     private fun postCaptureNotification(text: String) {
         ensureChannel()
 
-        // Open the app's main activity when tapped
+        // Open the app's main activity when tapped.
         val launchIntent = packageManager.getLaunchIntentForPackage(packageName)?.apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
         } ?: return

@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import {
-  View, Text, TouchableOpacity, Alert, ScrollView, ActivityIndicator,
+  View, Text, TouchableOpacity, Alert, ScrollView, ActivityIndicator, AppState,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,6 +11,7 @@ import type { Expense, Category } from '@/contexts/DataContext';
 import { ExpenseInputSheet } from '@/components/ExpenseInputSheet';
 import { ExpensePreviewSheet, type PreviewInitial } from '@/components/ExpensePreviewSheet';
 import type { ExpenseDraft } from '@/lib/ai';
+import * as NotificationListener from '@/modules/notification-listener/src';
 
 // ── Formatters ────────────────────────────────────────────────────────────────
 
@@ -106,6 +107,8 @@ export default function ExpensesScreen() {
   const [previewInitial, setPreviewInitial] = useState<PreviewInitial>(EMPTY_PREVIEW);
   const [previewMode, setPreviewMode] = useState<'add' | 'edit'>('add');
   const [editTarget, setEditTarget] = useState<Expense | null>(null);
+  const [pendingCaptures, setPendingCaptures] = useState<string[]>([]);
+  const [captureBeingImported, setCaptureBeingImported] = useState<string | null>(null);
 
   // ── Handle incoming share intent ───────────────────────────────────────────
   useEffect(() => {
@@ -118,9 +121,33 @@ export default function ExpensesScreen() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.shareText]);
 
+  const refreshPendingCaptures = useCallback(() => {
+    setPendingCaptures(NotificationListener.getPendingNotifications());
+  }, []);
+
+  useEffect(() => {
+    refreshPendingCaptures();
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') refreshPendingCaptures();
+    });
+    return () => sub.remove();
+  }, [refreshPendingCaptures]);
+
   const openInput = useCallback(() => {
     setInputInitialText(undefined);
+    setCaptureBeingImported(null);
     setInputVisible(true);
+  }, []);
+
+  const importCapture = useCallback((text: string) => {
+    setCaptureBeingImported(text);
+    setInputInitialText(text);
+    setInputVisible(true);
+  }, []);
+
+  const ignoreCapture = useCallback((text: string) => {
+    NotificationListener.removePendingNotification(text);
+    setPendingCaptures(NotificationListener.getPendingNotifications());
   }, []);
 
   const openManualPreview = useCallback(() => {
@@ -174,11 +201,16 @@ export default function ExpensesScreen() {
   }) => {
     if (previewMode === 'add') {
       await addExpense(fields);
+      if (captureBeingImported) {
+        NotificationListener.removePendingNotification(captureBeingImported);
+        setCaptureBeingImported(null);
+        refreshPendingCaptures();
+      }
     } else if (previewMode === 'edit' && editTarget) {
       await updateExpenseCat(editTarget.expense_id, fields.category_id);
     }
     setPreviewVisible(false);
-  }, [previewMode, editTarget, addExpense, updateExpenseCat]);
+  }, [previewMode, editTarget, captureBeingImported, addExpense, updateExpenseCat, refreshPendingCaptures]);
 
   const handlePreviewBack = useCallback(() => {
     setPreviewVisible(false);
@@ -289,6 +321,52 @@ export default function ExpensesScreen() {
             </TouchableOpacity>
           ))}
         </ScrollView>
+      )}
+
+      {pendingCaptures.length > 0 && (
+        <View className="mx-4 mb-3 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 p-4">
+          <View className="flex-row items-center justify-between gap-3 mb-3">
+            <View className="flex-1">
+              <Text className="text-sm font-bold text-amber-900 dark:text-amber-100">
+                Lançamentos capturados
+              </Text>
+              <Text className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
+                {pendingCaptures.length} notificação{pendingCaptures.length !== 1 ? 'ões' : ''} aguardando revisão
+              </Text>
+            </View>
+            <TouchableOpacity onPress={refreshPendingCaptures} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Ionicons name="refresh" size={18} color="#92400E" />
+            </TouchableOpacity>
+          </View>
+
+          {pendingCaptures.slice(0, 3).map((text) => (
+            <View key={text} className="bg-white/80 dark:bg-gray-950/60 rounded-xl p-3 mb-2">
+              <Text className="text-xs text-gray-700 dark:text-gray-300" numberOfLines={2}>
+                {text}
+              </Text>
+              <View className="flex-row justify-end gap-2 mt-3">
+                <TouchableOpacity
+                  onPress={() => ignoreCapture(text)}
+                  className="px-3 py-1.5 rounded-full bg-gray-100 dark:bg-gray-800"
+                >
+                  <Text className="text-xs font-semibold text-gray-600 dark:text-gray-300">Ignorar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => importCapture(text)}
+                  className="px-3 py-1.5 rounded-full bg-amber-600"
+                >
+                  <Text className="text-xs font-semibold text-white">Importar</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))}
+
+          {pendingCaptures.length > 3 && (
+            <Text className="text-xs text-amber-700 dark:text-amber-300 mt-1">
+              +{pendingCaptures.length - 3} captura{pendingCaptures.length - 3 !== 1 ? 's' : ''} na fila
+            </Text>
+          )}
+        </View>
       )}
 
       {/* List / empty states */}

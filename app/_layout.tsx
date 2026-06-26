@@ -7,7 +7,6 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { VaultProvider } from '@/contexts/VaultContext';
 import { DataProvider } from '@/contexts/DataContext';
-import { NotificationImportRouter } from '@/components/NotificationImportRouter';
 import { useThemeBootstrap } from '@/hooks/useTheme';
 
 export { ErrorBoundary } from 'expo-router';
@@ -33,7 +32,6 @@ export default function RootLayout() {
             <DataProvider>
               <ThemeBootstrap />
               <ThemedStatusBar />
-              <NotificationImportRouter />
               <Stack screenOptions={{ headerShown: false }} />
             </DataProvider>
           </VaultProvider>
