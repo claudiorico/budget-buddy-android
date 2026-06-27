@@ -12,7 +12,7 @@
     },
     "android": {
       "package": "br.com.claudiorico.gestaofinanceira",
-      "versionCode": 4,
+      "versionCode": 10,
       "adaptiveIcon": {
         "backgroundColor": "#3B0764",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
