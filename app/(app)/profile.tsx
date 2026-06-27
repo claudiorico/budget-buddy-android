@@ -5,6 +5,7 @@ import {
   Platform, Pressable, ActivityIndicator, Image,
 } from 'react-native';
 import { useFocusEffect } from 'expo-router';
+import Constants from 'expo-constants';
 import * as Linking from 'expo-linking';
 import * as NotificationListener from '@/modules/notification-listener/src';
 import * as Clipboard from 'expo-clipboard';
@@ -22,6 +23,7 @@ import { SupportSheet } from '@/components/SupportSheet';
 import { hasPrivacyPolicyUrl, PRIVACY_POLICY_URL } from '@/constants/legal';
 
 const GEMINI_KEY_URL = 'https://aistudio.google.com/apikey';
+const APP_VERSION = Constants.expoConfig?.version ?? 'dev';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -671,7 +673,7 @@ export default function ProfileScreen() {
             </Text>
           </View>
           <View className="gap-1 px-4 pb-3">
-            <Row label="Versão" value="1.0.0" />
+            <Row label="Versão" value={APP_VERSION} />
             <Row label="Armazenamento" value="Google Drive (appdata)" />
             <Row label="Criptografia" value="AES-256-GCM + PBKDF2" />
           </View>
