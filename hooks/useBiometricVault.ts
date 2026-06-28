@@ -34,13 +34,29 @@ export async function checkBiometricSupport(): Promise<BiometricSupport> {
 }
 
 async function authenticateUser(reason: string): Promise<boolean> {
-  const res = await LocalAuth.authenticateAsync({
-    promptMessage: reason,
-    cancelLabel: 'Cancelar',
-    disableDeviceFallback: false,
-    biometricsSecurityLevel: 'strong',
-  });
-  return res.success;
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+  try {
+    const auth = LocalAuth.authenticateAsync({
+      promptMessage: reason,
+      cancelLabel: 'Cancelar',
+      fallbackLabel: 'Usar senha do aparelho',
+      disableDeviceFallback: false,
+    });
+    const timeoutPromise = new Promise<false>((resolve) => {
+      timeout = setTimeout(() => {
+        if (Platform.OS === 'android') {
+          LocalAuth.cancelAuthenticate().catch(() => {});
+        }
+        resolve(false);
+      }, BIOMETRIC_TIMEOUT_MS);
+    });
+    const res = await Promise.race([auth, timeoutPromise]);
+    return typeof res === 'boolean' ? res : res.success;
+  } catch {
+    return false;
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
 }
 
 /** Returns the stored password if biometric auth succeeds, else null. */
@@ -86,16 +102,31 @@ export function useBiometricVault() {
     hasHardware: false, isEnrolled: false, primaryType: 'none',
   });
 
-  useEffect(() => {
-    checkBiometricSupport().then(setSupport);
+  const refreshSupport = useCallback(async (): Promise<BiometricSupport> => {
+    const next = await checkBiometricSupport();
+    setSupport(next);
+    return next;
   }, []);
+
+  useEffect(() => {
+    refreshSupport();
+  }, [refreshSupport]);
 
   /** Saves password under biometric protection. Returns true on success. */
   const enable = useCallback(async (password: string): Promise<boolean> => {
-    if (!support.isEnrolled) return false;
+    const currentSupport = await refreshSupport();
+    if (!currentSupport.hasHardware || !currentSupport.isEnrolled) return false;
+
     const ok = await authenticateUser('Confirmar para ativar desbloqueio por digital');
     if (!ok) return false;
+
     try {
+      try {
+        await SecureStore.deleteItemAsync(SS_KEY, {
+          keychainService: 'budget-buddy-vault',
+        });
+      } catch { /* ignore stale item */ }
+
       await SecureStore.setItemAsync(SS_KEY, password, {
         requireAuthentication: true,
         authenticationPrompt: 'Desbloquear cofre',
@@ -107,7 +138,7 @@ export function useBiometricVault() {
     } catch {
       return false;
     }
-  }, [support.isEnrolled]);
+  }, [refreshSupport]);
 
   const disable = useCallback(async (): Promise<void> => {
     try {
@@ -119,5 +150,5 @@ export function useBiometricVault() {
     setEnabledState(false);
   }, []);
 
-  return { enabled, support, enable, disable };
+  return { enabled, support, refreshSupport, enable, disable };
 }

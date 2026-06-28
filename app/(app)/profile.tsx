@@ -24,6 +24,7 @@ import { hasPrivacyPolicyUrl, PRIVACY_POLICY_URL } from '@/constants/legal';
 
 const GEMINI_KEY_URL = 'https://aistudio.google.com/apikey';
 const APP_VERSION = Constants.expoConfig?.version ?? 'dev';
+const NOTIFICATION_MONITOR_EMAIL = 'claudiorico81@gmail.com';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -41,29 +42,37 @@ export default function ProfileScreen() {
   const isDark = scheme === 'dark';
   const sheetBg = isDark ? '#111827' : 'white';
   const bio = useBiometricVault();
+  const canUseNotificationMonitor =
+    user?.email?.trim().toLowerCase() === NOTIFICATION_MONITOR_EMAIL;
 
   // ── Notification listener permission ─────────────────────────────────────
   const [notifPermGranted, setNotifPermGranted] = useState(false);
   const [notifDiagnostics, setNotifDiagnostics] = useState<NotificationListener.NotificationDiagnostics | null>(null);
 
   const refreshNotificationDiagnostics = useCallback(() => {
+    if (!canUseNotificationMonitor) {
+      setNotifPermGranted(false);
+      setNotifDiagnostics(null);
+      return;
+    }
     const diagnostics = NotificationListener.getDiagnostics();
     setNotifPermGranted(diagnostics.permissionGranted);
     setNotifDiagnostics(diagnostics);
-  }, []);
+  }, [canUseNotificationMonitor]);
 
   useFocusEffect(useCallback(() => {
     refreshNotificationDiagnostics();
   }, [refreshNotificationDiagnostics]));
 
   const handleSimulateCapture = useCallback(() => {
+    if (!canUseNotificationMonitor) return;
     NotificationListener.simulateCapture('Compra aprovada no cartão R$ 42,90 Mercado Exemplo');
     refreshNotificationDiagnostics();
     Alert.alert(
       'Captura de teste criada',
       'Abra a tela de Gastos para revisar e importar o lançamento capturado.',
     );
-  }, [refreshNotificationDiagnostics]);
+  }, [canUseNotificationMonitor, refreshNotificationDiagnostics]);
 
   // ── Donation / Support modals ─────────────────────────────────────────────
   const [donationVisible, setDonationVisible] = useState(false);
@@ -360,7 +369,7 @@ export default function ProfileScreen() {
     }).start(() => setBioModalVisible(false));
   }, [bioSlideAnim]);
 
-  const handleBioToggle = useCallback(() => {
+  const handleBioToggle = useCallback(async () => {
     if (bio.enabled) {
       Alert.alert(
         'Desativar desbloqueio por digital?',
@@ -371,11 +380,12 @@ export default function ProfileScreen() {
         ],
       );
     } else {
-      if (!bio.support.hasHardware) {
+      const support = await bio.refreshSupport();
+      if (!support.hasHardware) {
         Alert.alert('Sem biometria', 'Este aparelho não tem leitor biométrico.');
         return;
       }
-      if (!bio.support.isEnrolled) {
+      if (!support.isEnrolled) {
         Alert.alert(
           'Cadastre uma digital',
           'Vá em Configurações → Segurança → Biometria e cadastre uma digital antes de ativar.',
@@ -551,6 +561,9 @@ export default function ProfileScreen() {
           />
         </View>
 
+        {canUseNotificationMonitor && (
+        <>
+
         {/* ── 4. Automation section ───────────────────────────────────────── */}
         <View className="mx-4 mb-4 bg-white dark:bg-gray-900 rounded-2xl shadow-sm overflow-hidden">
           <View className="px-4 pt-4 pb-2">
@@ -633,6 +646,8 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        </>
+        )}
         {/* ── 5. Security section ─────────────────────────────────────────── */}
         <View className="mx-4 mb-4 bg-white dark:bg-gray-900 rounded-2xl shadow-sm overflow-hidden">
           <View className="px-4 pt-4 pb-2">
