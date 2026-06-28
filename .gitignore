@@ -45,6 +45,7 @@ google-services.json
 GoogleService-Info.plist
 credentials.json
 /credentials/
+store-assets/gestao-financeira-*.apk
 
 # Claude Code local session files
 .claude/
