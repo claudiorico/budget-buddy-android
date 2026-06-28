@@ -108,6 +108,7 @@ export default function ExpensesScreen() {
   const [previewMode, setPreviewMode] = useState<'add' | 'edit'>('add');
   const [editTarget, setEditTarget] = useState<Expense | null>(null);
   const [pendingCaptures, setPendingCaptures] = useState<string[]>([]);
+  const [capturePermissionGranted, setCapturePermissionGranted] = useState(false);
   const [captureBeingImported, setCaptureBeingImported] = useState<string | null>(null);
 
   // ── Handle incoming share intent ───────────────────────────────────────────
@@ -123,6 +124,7 @@ export default function ExpensesScreen() {
 
   const refreshPendingCaptures = useCallback(() => {
     setPendingCaptures(NotificationListener.getPendingNotifications());
+    setCapturePermissionGranted(NotificationListener.isPermissionGranted());
   }, []);
 
   useEffect(() => {
@@ -366,6 +368,17 @@ export default function ExpensesScreen() {
               +{pendingCaptures.length - 3} captura{pendingCaptures.length - 3 !== 1 ? 's' : ''} na fila
             </Text>
           )}
+        </View>
+      )}
+
+      {pendingCaptures.length === 0 && capturePermissionGranted && (
+        <View className="mx-4 mb-3 rounded-2xl bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900 p-3">
+          <Text className="text-xs font-semibold text-blue-800 dark:text-blue-200">
+            Captura de notificações ativa
+          </Text>
+          <Text className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+            Nenhum lançamento aguardando revisão. Se um gasto real não aparecer, veja o diagnóstico em Perfil.
+          </Text>
         </View>
       )}
 

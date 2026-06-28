@@ -2,6 +2,20 @@ import { requireNativeModule } from 'expo-modules-core';
 
 const NativeModule = requireNativeModule('NotificationListener');
 
+export type NotificationDiagnosticEvent = {
+  packageName: string;
+  text: string;
+  captured: boolean;
+  reason: string;
+  timestamp: number;
+};
+
+export type NotificationDiagnostics = {
+  permissionGranted: boolean;
+  pendingCount: number;
+  recentEvents: NotificationDiagnosticEvent[];
+};
+
 export function getPendingNotifications(): string[] {
   return NativeModule.getPendingNotifications() ?? [];
 }
@@ -12,6 +26,15 @@ export function removePendingNotification(text: string): void {
 
 export function clearPendingNotifications(): void {
   NativeModule.clearPendingNotifications();
+}
+
+export function getDiagnostics(): NotificationDiagnostics {
+  const result = NativeModule.getDiagnostics?.() ?? {};
+  return {
+    permissionGranted: Boolean(result.permissionGranted),
+    pendingCount: Number(result.pendingCount ?? 0),
+    recentEvents: Array.isArray(result.recentEvents) ? result.recentEvents : [],
+  };
 }
 
 export function isPermissionGranted(): boolean {

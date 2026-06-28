@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  ScrollView, ActivityIndicator, Keyboard, Platform,
+  ScrollView, ActivityIndicator, Keyboard, Platform, Alert,
 } from 'react-native';
 import Animated, {
   useSharedValue, useAnimatedStyle,
@@ -16,17 +16,32 @@ import { useBiometricVault, unlockWithBiometric } from '@/hooks/useBiometricVaul
 
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_SECONDS = 30;
+const RESET_CONFIRMATION = 'APAGAR';
 
-type Mode = 'unlock' | 'recover';
+type Mode = 'unlock' | 'recover' | 'reset';
 
 export default function VaultUnlockScreen() {
   const router = useRouter();
   const { signOut } = useAuth();
-  const { unlockVault, recoverVault } = useVault();
+  const { unlockVault, recoverVault, deleteVaultAndDriveData } = useVault();
 
   const bio = useBiometricVault();
   const [mode, setMode] = useState<Mode>('unlock');
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [mnemonic, setMnemonic] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [biometricLoading, setBiometricLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetConfirmation, setResetConfirmation] = useState('');
+  const [error, setError] = useState('');
+  const autoBiometricTriedRef = useRef(false);
+
+  const loading = passwordLoading || biometricLoading || resetLoading;
 
   useEffect(() => {
     const showEvt = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
@@ -37,16 +52,6 @@ export default function VaultUnlockScreen() {
     const onHide = Keyboard.addListener(hideEvt, () => setKeyboardHeight(0));
     return () => { onShow.remove(); onHide.remove(); };
   }, []);
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [mnemonic, setMnemonic] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [confirmNewPassword, setConfirmNewPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  // ── Lockout ───────────────────────────────────────────────────────────────
 
   const [attempts, setAttempts] = useState(0);
   const [blockedUntil, setBlockedUntil] = useState<number | null>(null);
@@ -74,7 +79,7 @@ export default function VaultUnlockScreen() {
     update();
     timerRef.current = setInterval(update, 500);
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [blockedUntil]);
+  }, [blockedUntil, isBlocked]);
 
   const recordFailedAttempt = () => {
     const next = attempts + 1;
@@ -83,8 +88,6 @@ export default function VaultUnlockScreen() {
       setBlockedUntil(Date.now() + LOCKOUT_SECONDS * 1000);
     }
   };
-
-  // ── Shake animation ───────────────────────────────────────────────────────
 
   const offset = useSharedValue(0);
   const animStyle = useAnimatedStyle(() => ({
@@ -101,44 +104,40 @@ export default function VaultUnlockScreen() {
     );
   };
 
-  // ── Biometric unlock ─────────────────────────────────────────────────────
-
   const handleBiometricUnlock = async () => {
-    if (loading || isBlocked) return;
+    if (passwordLoading || biometricLoading || resetLoading || isBlocked) return;
     setError('');
-    setLoading(true);
+    setBiometricLoading(true);
     try {
       const pwd = await unlockWithBiometric();
       if (!pwd) {
-        // Cancelado ou falhou — silencioso, usuário pode tentar de novo ou usar senha
+        setError('Não foi possível usar digital. Use a senha ou tente novamente.');
         return;
       }
       const ok = await unlockVault(pwd);
       if (ok) {
         router.replace('/(app)/dashboard');
       } else {
-        // Senha guardada não bate mais — provavelmente trocou via recover
+        await bio.disable();
         setError('Senha biométrica desatualizada. Use sua senha do cofre.');
       }
     } finally {
-      setLoading(false);
+      setBiometricLoading(false);
     }
   };
 
-  // Auto-tentar biometria ao abrir a tela, se ativado
   useEffect(() => {
-    if (bio.enabled && mode === 'unlock' && !isBlocked) {
+    if (bio.enabled && mode === 'unlock' && !isBlocked && !autoBiometricTriedRef.current) {
+      autoBiometricTriedRef.current = true;
       handleBiometricUnlock();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bio.enabled]);
-
-  // ── Unlock ────────────────────────────────────────────────────────────────
+  }, [bio.enabled, mode, isBlocked]);
 
   const handleUnlock = async () => {
     if (isBlocked) return;
     setError('');
-    setLoading(true);
+    setPasswordLoading(true);
     try {
       const ok = await unlockVault(password);
       if (ok) {
@@ -157,11 +156,9 @@ export default function VaultUnlockScreen() {
     } catch {
       setError('Erro ao desbloquear. Verifique sua conexão.');
     } finally {
-      setLoading(false);
+      setPasswordLoading(false);
     }
   };
-
-  // ── Recover ───────────────────────────────────────────────────────────────
 
   const handleRecover = async () => {
     setError('');
@@ -171,7 +168,7 @@ export default function VaultUnlockScreen() {
     if (newPassword.length < 8) { setError('A nova senha deve ter ao menos 8 caracteres'); return; }
     if (newPassword !== confirmNewPassword) { setError('As senhas não coincidem'); return; }
 
-    setLoading(true);
+    setPasswordLoading(true);
     try {
       const ok = await recoverVault(normalised, newPassword);
       if (ok) {
@@ -183,7 +180,7 @@ export default function VaultUnlockScreen() {
     } catch {
       setError('Erro ao recuperar o cofre. Verifique sua conexão.');
     } finally {
-      setLoading(false);
+      setPasswordLoading(false);
     }
   };
 
@@ -194,9 +191,63 @@ export default function VaultUnlockScreen() {
     setMnemonic('');
     setNewPassword('');
     setConfirmNewPassword('');
+    setResetConfirmation('');
   };
 
-  // ─────────────────────────────────────────────────────────────────────────
+  const openResetMode = () => {
+    Alert.alert(
+      'Perdeu senha e palavras?',
+      'A única forma de continuar será apagar definitivamente o cofre e todos os dados do app no Google Drive. Isso não pode ser desfeito.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Entendo, continuar',
+          style: 'destructive',
+          onPress: () => switchMode('reset'),
+        },
+      ],
+    );
+  };
+
+  const handleResetVault = () => {
+    if (resetConfirmation.trim().toUpperCase() !== RESET_CONFIRMATION) {
+      setError(`Digite ${RESET_CONFIRMATION} para confirmar.`);
+      return;
+    }
+
+    Alert.alert(
+      'Confirmar exclusão definitiva',
+      'Vou apagar cofre, gastos, categorias e metas do Google Drive. Depois disso você criará um cofre novo vazio.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Apagar tudo',
+          style: 'destructive',
+          onPress: async () => {
+            setError('');
+            setResetLoading(true);
+            try {
+              await bio.disable();
+              await deleteVaultAndDriveData();
+              router.replace('/(vault)/setup');
+            } catch {
+              setError('Não foi possível apagar os dados. Verifique sua conexão e tente novamente.');
+            } finally {
+              setResetLoading(false);
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const modeTitle = mode === 'unlock' ? 'Desbloquear Cofre' : mode === 'recover' ? 'Recuperar Cofre' : 'Criar cofre novo';
+  const modeEmoji = mode === 'unlock' ? '🔒' : mode === 'recover' ? '🗝️' : '⚠️';
+  const modeSubtitle = mode === 'unlock'
+    ? 'Digite sua senha do cofre para acessar seus dados.'
+    : mode === 'recover'
+      ? 'Use suas 12 palavras para redefinir a senha.'
+      : 'Use apenas se você perdeu senha e palavras. Seus dados atuais serão apagados.';
 
   return (
     <ScrollView
@@ -206,27 +257,20 @@ export default function VaultUnlockScreen() {
         justifyContent: 'center',
         paddingHorizontal: 24,
         paddingTop: 48,
-        // Adiciona padding-bottom igual à altura do teclado quando ele abre,
-        // empurrando o conteúdo centralizado pra cima e deixando tudo visível.
         paddingBottom: keyboardHeight > 0 ? keyboardHeight + 24 : 48,
       }}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="on-drag"
     >
-      {/* Header */}
       <View className="items-center mb-10">
-        <Text className="text-5xl mb-4">{mode === 'unlock' ? '🔒' : '🗝️'}</Text>
+        <Text className="text-5xl mb-4">{modeEmoji}</Text>
         <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-          {mode === 'unlock' ? 'Desbloquear Cofre' : 'Recuperar Cofre'}
+          {modeTitle}
         </Text>
         <Text className="text-sm text-gray-500 mt-1 text-center leading-relaxed">
-          {mode === 'unlock'
-            ? 'Digite sua senha do cofre para acessar seus dados.'
-            : 'Use suas 12 palavras para redefinir a senha.'}
+          {modeSubtitle}
         </Text>
       </View>
-
-      {/* ── Lockout banner ───────────────────────────────────────────────── */}
 
       {isBlocked && (
         <View className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-xl p-4 mb-4 items-center">
@@ -238,8 +282,6 @@ export default function VaultUnlockScreen() {
           </Text>
         </View>
       )}
-
-      {/* ── Unlock mode ──────────────────────────────────────────────────── */}
 
       {mode === 'unlock' && (
         <View className="gap-4">
@@ -256,7 +298,7 @@ export default function VaultUnlockScreen() {
                 onChangeText={setPassword}
                 onSubmitEditing={handleUnlock}
                 returnKeyType="done"
-                editable={!isBlocked && !loading}
+                editable={!isBlocked && !passwordLoading && !resetLoading}
                 autoFocus
               />
               <TouchableOpacity onPress={() => setShowPassword(v => !v)}>
@@ -269,13 +311,13 @@ export default function VaultUnlockScreen() {
 
           <TouchableOpacity
             onPress={handleUnlock}
-            disabled={loading || isBlocked || !password}
+            disabled={passwordLoading || isBlocked || !password}
             activeOpacity={0.85}
             className={`rounded-xl py-4 items-center ${
-              loading || isBlocked || !password ? 'bg-blue-300' : 'bg-blue-600'
+              passwordLoading || isBlocked || !password ? 'bg-blue-300' : 'bg-blue-600'
             }`}
           >
-            {loading ? (
+            {passwordLoading ? (
               <ActivityIndicator color="white" />
             ) : (
               <Text className="text-white font-semibold text-base">Desbloquear</Text>
@@ -286,14 +328,18 @@ export default function VaultUnlockScreen() {
             <TouchableOpacity
               testID="bio-unlock-btn"
               onPress={handleBiometricUnlock}
-              disabled={loading || isBlocked}
+              disabled={passwordLoading || biometricLoading || resetLoading || isBlocked}
               className="flex-row items-center justify-center gap-2 border border-sky-500 dark:border-sky-400 rounded-xl py-3.5"
               activeOpacity={0.85}
             >
               <Ionicons name="finger-print" size={20} color="#0EA5E9" />
-              <Text className="text-sky-600 dark:text-sky-400 font-semibold text-sm">
-                Usar digital
-              </Text>
+              {biometricLoading ? (
+                <ActivityIndicator color="#0EA5E9" />
+              ) : (
+                <Text className="text-sky-600 dark:text-sky-400 font-semibold text-sm">
+                  Usar digital
+                </Text>
+              )}
             </TouchableOpacity>
           )}
 
@@ -307,6 +353,15 @@ export default function VaultUnlockScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
+            onPress={openResetMode}
+            className="items-center py-2"
+          >
+            <Text className="text-sm text-red-500 dark:text-red-400">
+              Perdi senha e palavras
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
             onPress={signOut}
             className="items-center py-2"
           >
@@ -314,8 +369,6 @@ export default function VaultUnlockScreen() {
           </TouchableOpacity>
         </View>
       )}
-
-      {/* ── Recover mode ─────────────────────────────────────────────────── */}
 
       {mode === 'recover' && (
         <View className="gap-4">
@@ -376,14 +429,68 @@ export default function VaultUnlockScreen() {
 
           <TouchableOpacity
             onPress={handleRecover}
-            disabled={loading}
+            disabled={passwordLoading}
             activeOpacity={0.85}
-            className={`rounded-xl py-4 items-center ${loading ? 'bg-blue-300' : 'bg-blue-600'}`}
+            className={`rounded-xl py-4 items-center ${passwordLoading ? 'bg-blue-300' : 'bg-blue-600'}`}
           >
-            {loading ? (
+            {passwordLoading ? (
               <ActivityIndicator color="white" />
             ) : (
               <Text className="text-white font-semibold text-base">Recuperar cofre</Text>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => switchMode('unlock')}
+            className="items-center py-2"
+          >
+            <Text className="text-sm text-gray-500">← Voltar para senha</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {mode === 'reset' && (
+        <View className="gap-4">
+          <View className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-xl p-4">
+            <Text className="text-red-700 dark:text-red-300 font-semibold text-sm">
+              Exclusão definitiva
+            </Text>
+            <Text className="text-red-600 dark:text-red-400 text-xs mt-2 leading-relaxed">
+              Isso apagará do Google Drive todos os arquivos do app: cofre, gastos,
+              categorias e metas. Se não tiver backup externo, os dados atuais serão perdidos.
+            </Text>
+          </View>
+
+          <View className="gap-1.5">
+            <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Digite {RESET_CONFIRMATION} para confirmar
+            </Text>
+            <TextInput
+              className="border border-gray-300 dark:border-gray-600 rounded-xl px-4 py-3.5 text-base text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 font-semibold"
+              placeholder={RESET_CONFIRMATION}
+              placeholderTextColor="#9CA3AF"
+              value={resetConfirmation}
+              onChangeText={setResetConfirmation}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              editable={!resetLoading}
+            />
+          </View>
+
+          {error ? <Text className="text-sm text-red-500">{error}</Text> : null}
+
+          <TouchableOpacity
+            onPress={handleResetVault}
+            disabled={resetLoading || resetConfirmation.trim().toUpperCase() !== RESET_CONFIRMATION}
+            activeOpacity={0.85}
+            className={`rounded-xl py-4 items-center ${
+              resetLoading || resetConfirmation.trim().toUpperCase() !== RESET_CONFIRMATION ? 'bg-red-300' : 'bg-red-600'
+            }`}
+          >
+            {resetLoading ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <Text className="text-white font-semibold text-base">Apagar tudo e criar novo cofre</Text>
             )}
           </TouchableOpacity>
 

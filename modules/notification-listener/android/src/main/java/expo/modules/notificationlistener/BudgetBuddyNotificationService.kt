@@ -10,13 +10,16 @@ import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import androidx.core.app.NotificationCompat
 import org.json.JSONArray
+import org.json.JSONObject
 
 class BudgetBuddyNotificationService : NotificationListenerService() {
 
     companion object {
         private const val PREFS_NAME = "budget_buddy_notif"
         private const val KEY_PENDING_QUEUE = "pending_queue"
+        private const val KEY_RECENT_EVENTS = "recent_events"
         private const val MAX_QUEUE_SIZE = 30
+        private const val MAX_RECENT_EVENTS = 20
         private const val CHANNEL_ID = "budget_buddy_imports"
         private const val NOTIF_ID = 9901
 
@@ -65,9 +68,12 @@ class BudgetBuddyNotificationService : NotificationListenerService() {
             return (0 until arr.length()).map { arr.getString(it) }
         }
 
-        fun addPendingText(context: Context, text: String) {
-            val queue = (getPendingQueue(context).filterNot { it == text } + text).takeLast(MAX_QUEUE_SIZE)
+        fun addPendingText(context: Context, text: String): Boolean {
+            val existing = getPendingQueue(context)
+            if (existing.any { it == text }) return false
+            val queue = (existing + text).takeLast(MAX_QUEUE_SIZE)
             saveQueue(context, queue)
+            return true
         }
 
         fun removePendingText(context: Context, text: String) {
@@ -85,11 +91,56 @@ class BudgetBuddyNotificationService : NotificationListenerService() {
             queue.forEach { arr.put(it) }
             prefs(context).edit().putString(KEY_PENDING_QUEUE, arr.toString()).apply()
         }
+
+        fun getRecentEvents(context: Context): List<Map<String, Any>> {
+            val raw = prefs(context).getString(KEY_RECENT_EVENTS, null) ?: return emptyList()
+            val arr = JSONArray(raw)
+            return (0 until arr.length()).map { index ->
+                val item = arr.getJSONObject(index)
+                mapOf(
+                    "packageName" to item.optString("packageName"),
+                    "text" to item.optString("text"),
+                    "captured" to item.optBoolean("captured"),
+                    "reason" to item.optString("reason"),
+                    "timestamp" to item.optLong("timestamp"),
+                )
+            }
+        }
+
+        private fun addRecentEvent(
+            context: Context,
+            packageName: String,
+            text: String,
+            captured: Boolean,
+            reason: String,
+        ) {
+            val arr = JSONArray()
+            val event = JSONObject()
+                .put("packageName", packageName)
+                .put("text", text.take(180))
+                .put("captured", captured)
+                .put("reason", reason)
+                .put("timestamp", System.currentTimeMillis())
+
+            arr.put(event)
+            getRecentEvents(context).take(MAX_RECENT_EVENTS - 1).forEach { previous ->
+                arr.put(JSONObject(previous))
+            }
+            prefs(context).edit().putString(KEY_RECENT_EVENTS, arr.toString()).apply()
+        }
+
+        private fun isLikelyFinancialPackage(packageName: String): Boolean {
+            val lower = packageName.lowercase()
+            return listOf(
+                "bank", "banco", "wallet", "pay", "pix", "card", "cartao",
+                "mercado", "picpay", "nubank", "itau", "bradesco", "santander",
+                "intermedium", "c6", "caixa", "neon", "bb.android",
+            ).any { lower.contains(it) }
+        }
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         sbn ?: return
-        if (sbn.packageName !in BANK_PACKAGES) return
 
         val extras = sbn.notification?.extras ?: return
         val full = listOf(
@@ -105,10 +156,34 @@ class BudgetBuddyNotificationService : NotificationListenerService() {
             .replace(Regex("\\s+"), " ")
             .trim()
 
-        if (full.isBlank()) return
-        if (BANK_PATTERNS.none { it.containsMatchIn(full) }) return
+        if (sbn.packageName == packageName) {
+            addRecentEvent(this, sbn.packageName, full, false, "notificação do próprio app")
+            return
+        }
 
-        addPendingText(this, full)
+        if (full.isBlank()) {
+            addRecentEvent(this, sbn.packageName, "", false, "texto vazio")
+            return
+        }
+
+        val monitoredPackage = sbn.packageName in BANK_PACKAGES || isLikelyFinancialPackage(sbn.packageName)
+        if (!monitoredPackage) {
+            addRecentEvent(this, sbn.packageName, full, false, "pacote não monitorado")
+            return
+        }
+
+        if (BANK_PATTERNS.none { it.containsMatchIn(full) }) {
+            addRecentEvent(this, sbn.packageName, full, false, "texto sem valor/pix")
+            return
+        }
+
+        val added = addPendingText(this, full)
+        if (!added) {
+            addRecentEvent(this, sbn.packageName, full, false, "já capturado")
+            return
+        }
+
+        addRecentEvent(this, sbn.packageName, full, true, "capturado")
         postCaptureNotification(full)
     }
 

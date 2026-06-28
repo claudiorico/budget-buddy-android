@@ -44,10 +44,26 @@ export default function ProfileScreen() {
 
   // ── Notification listener permission ─────────────────────────────────────
   const [notifPermGranted, setNotifPermGranted] = useState(false);
+  const [notifDiagnostics, setNotifDiagnostics] = useState<NotificationListener.NotificationDiagnostics | null>(null);
+
+  const refreshNotificationDiagnostics = useCallback(() => {
+    const diagnostics = NotificationListener.getDiagnostics();
+    setNotifPermGranted(diagnostics.permissionGranted);
+    setNotifDiagnostics(diagnostics);
+  }, []);
 
   useFocusEffect(useCallback(() => {
-    setNotifPermGranted(NotificationListener.isPermissionGranted());
-  }, []));
+    refreshNotificationDiagnostics();
+  }, [refreshNotificationDiagnostics]));
+
+  const handleSimulateCapture = useCallback(() => {
+    NotificationListener.simulateCapture('Compra aprovada no cartão R$ 42,90 Mercado Exemplo');
+    refreshNotificationDiagnostics();
+    Alert.alert(
+      'Captura de teste criada',
+      'Abra a tela de Gastos para revisar e importar o lançamento capturado.',
+    );
+  }, [refreshNotificationDiagnostics]);
 
   // ── Donation / Support modals ─────────────────────────────────────────────
   const [donationVisible, setDonationVisible] = useState(false);
@@ -573,6 +589,48 @@ export default function ProfileScreen() {
               }
             }}
           />
+          <View className="px-4 pb-4">
+            <Text className="text-xs text-gray-500 dark:text-gray-400">
+              Status: {notifPermGranted ? 'ativo' : 'desativado'} · {notifDiagnostics?.pendingCount ?? 0} pendente{(notifDiagnostics?.pendingCount ?? 0) !== 1 ? 's' : ''}
+            </Text>
+            <Text className="text-xs text-gray-400 dark:text-gray-600 mt-1 leading-relaxed">
+              Após atualizar ou reinstalar, o Android pode desativar esse acesso. Se nada aparecer,
+              use o teste abaixo e confira os últimos eventos analisados.
+            </Text>
+
+            <View className="flex-row flex-wrap gap-2 mt-3">
+              <TouchableOpacity
+                onPress={refreshNotificationDiagnostics}
+                className="px-3 py-2 rounded-full bg-gray-100 dark:bg-gray-800"
+              >
+                <Text className="text-xs font-semibold text-gray-700 dark:text-gray-200">Atualizar status</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleSimulateCapture}
+                className="px-3 py-2 rounded-full bg-blue-600"
+              >
+                <Text className="text-xs font-semibold text-white">Enviar captura de teste</Text>
+              </TouchableOpacity>
+            </View>
+
+            {notifDiagnostics?.recentEvents?.length ? (
+              <View className="mt-3 rounded-xl bg-gray-50 dark:bg-gray-950 border border-gray-100 dark:border-gray-800 p-3">
+                <Text className="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-2">
+                  Últimas notificações analisadas
+                </Text>
+                {notifDiagnostics.recentEvents.slice(0, 4).map((event, index) => (
+                  <View key={`${event.timestamp}-${index}`} className="mb-2 last:mb-0">
+                    <Text className="text-[11px] font-semibold text-gray-600 dark:text-gray-300" numberOfLines={1}>
+                      {event.captured ? 'Capturado' : 'Ignorado'} · {event.reason} · {event.packageName}
+                    </Text>
+                    <Text className="text-[11px] text-gray-400 dark:text-gray-600" numberOfLines={2}>
+                      {event.text || 'Sem texto visível'}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+          </View>
         </View>
 
         {/* ── 5. Security section ─────────────────────────────────────────── */}

@@ -27,12 +27,22 @@ class NotificationListenerModule : Module() {
             null
         }
 
+        Function("getDiagnostics") {
+            val ctx = appContext.reactContext ?: return@Function mapOf(
+                "permissionGranted" to false,
+                "pendingCount" to 0,
+                "recentEvents" to emptyList<Map<String, Any>>(),
+            )
+            mapOf(
+                "permissionGranted" to isNotificationAccessEnabled(ctx),
+                "pendingCount" to BudgetBuddyNotificationService.getPendingQueue(ctx).size,
+                "recentEvents" to BudgetBuddyNotificationService.getRecentEvents(ctx),
+            )
+        }
+
         Function("isPermissionGranted") {
             val ctx = appContext.reactContext ?: return@Function false
-            val enabled = Settings.Secure.getString(
-                ctx.contentResolver, "enabled_notification_listeners"
-            ) ?: ""
-            enabled.contains(ctx.packageName)
+            isNotificationAccessEnabled(ctx)
         }
 
         Function("openPermissionSettings") {
@@ -51,5 +61,12 @@ class NotificationListenerModule : Module() {
             }
             null
         }
+    }
+
+    private fun isNotificationAccessEnabled(ctx: android.content.Context): Boolean {
+        val enabled = Settings.Secure.getString(
+            ctx.contentResolver, "enabled_notification_listeners"
+        ) ?: ""
+        return enabled.contains(ctx.packageName)
     }
 }
