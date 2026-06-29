@@ -39,7 +39,6 @@ export default function VaultUnlockScreen() {
   const [resetLoading, setResetLoading] = useState(false);
   const [resetConfirmation, setResetConfirmation] = useState('');
   const [error, setError] = useState('');
-  const autoBiometricTriedRef = useRef(false);
 
   const loading = passwordLoading || biometricLoading || resetLoading;
 
@@ -125,14 +124,6 @@ export default function VaultUnlockScreen() {
       setBiometricLoading(false);
     }
   };
-
-  useEffect(() => {
-    if (bio.enabled && mode === 'unlock' && !isBlocked && !autoBiometricTriedRef.current) {
-      autoBiometricTriedRef.current = true;
-      handleBiometricUnlock();
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bio.enabled, mode, isBlocked]);
 
   const handleUnlock = async () => {
     if (isBlocked) return;
