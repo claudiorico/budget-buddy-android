@@ -42,6 +42,7 @@ export default function VaultUnlockScreen() {
   const [appState, setAppState] = useState(AppState.currentState);
   const lastAutoBiometricAtRef = useRef(0);
   const autoBiometricTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const unlockCompletedRef = useRef(false);
 
   const loading = passwordLoading || biometricLoading || resetLoading;
 
@@ -112,6 +113,7 @@ export default function VaultUnlockScreen() {
   };
 
   const handleBiometricUnlock = async ({ automatic = false } = {}) => {
+    if (unlockCompletedRef.current) return;
     if (passwordLoading || biometricLoading || resetLoading || isBlocked) return;
     setError('');
     setBiometricLoading(true);
@@ -132,6 +134,11 @@ export default function VaultUnlockScreen() {
       }
       const ok = await unlockVault(result.password);
       if (ok) {
+        unlockCompletedRef.current = true;
+        if (autoBiometricTimerRef.current) {
+          clearTimeout(autoBiometricTimerRef.current);
+          autoBiometricTimerRef.current = null;
+        }
         router.replace('/(app)/dashboard');
       } else {
         await bio.disable();
@@ -145,6 +152,7 @@ export default function VaultUnlockScreen() {
   useEffect(() => {
     if (
       !bio.enabled ||
+      unlockCompletedRef.current ||
       mode !== 'unlock' ||
       isBlocked ||
       appState !== 'active' ||
