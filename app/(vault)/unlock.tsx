@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  ScrollView, ActivityIndicator, Keyboard, Platform, Alert,
+  ScrollView, ActivityIndicator, Keyboard, Platform, Alert, AppState,
 } from 'react-native';
 import Animated, {
   useSharedValue, useAnimatedStyle,
@@ -39,8 +39,16 @@ export default function VaultUnlockScreen() {
   const [resetLoading, setResetLoading] = useState(false);
   const [resetConfirmation, setResetConfirmation] = useState('');
   const [error, setError] = useState('');
+  const [appState, setAppState] = useState(AppState.currentState);
+  const lastAutoBiometricAtRef = useRef(0);
+  const autoBiometricTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loading = passwordLoading || biometricLoading || resetLoading;
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', setAppState);
+    return () => sub.remove();
+  }, []);
 
   useEffect(() => {
     const showEvt = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
@@ -103,14 +111,16 @@ export default function VaultUnlockScreen() {
     );
   };
 
-  const handleBiometricUnlock = async () => {
+  const handleBiometricUnlock = async ({ automatic = false } = {}) => {
     if (passwordLoading || biometricLoading || resetLoading || isBlocked) return;
     setError('');
     setBiometricLoading(true);
     try {
       const pwd = await unlockWithBiometric();
       if (!pwd) {
-        setError('Não foi possível usar digital. Use a senha ou tente novamente.');
+        if (!automatic) {
+          setError('Não foi possível usar digital. Use a senha ou tente novamente.');
+        }
         return;
       }
       const ok = await unlockVault(pwd);
@@ -124,6 +134,40 @@ export default function VaultUnlockScreen() {
       setBiometricLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (
+      !bio.enabled ||
+      mode !== 'unlock' ||
+      isBlocked ||
+      appState !== 'active' ||
+      passwordLoading ||
+      biometricLoading ||
+      resetLoading
+    ) {
+      return;
+    }
+
+    const now = Date.now();
+    if (now - lastAutoBiometricAtRef.current < 1500) return;
+
+    if (autoBiometricTimerRef.current) {
+      clearTimeout(autoBiometricTimerRef.current);
+    }
+
+    autoBiometricTimerRef.current = setTimeout(() => {
+      lastAutoBiometricAtRef.current = Date.now();
+      handleBiometricUnlock({ automatic: true });
+    }, Platform.OS === 'android' ? 700 : 250);
+
+    return () => {
+      if (autoBiometricTimerRef.current) {
+        clearTimeout(autoBiometricTimerRef.current);
+        autoBiometricTimerRef.current = null;
+      }
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bio.enabled, mode, isBlocked, appState, passwordLoading, biometricLoading, resetLoading]);
 
   const handleUnlock = async () => {
     if (isBlocked) return;
@@ -318,7 +362,7 @@ export default function VaultUnlockScreen() {
           {bio.enabled && (
             <TouchableOpacity
               testID="bio-unlock-btn"
-              onPress={handleBiometricUnlock}
+              onPress={() => handleBiometricUnlock()}
               disabled={passwordLoading || biometricLoading || resetLoading || isBlocked}
               className="flex-row items-center justify-center gap-2 border border-sky-500 dark:border-sky-400 rounded-xl py-3.5"
               activeOpacity={0.85}
