@@ -12,7 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { useVault } from '@/contexts/VaultContext';
 import { validateMnemonic } from '@/lib/crypto';
-import { useBiometricVault, unlockWithBiometric } from '@/hooks/useBiometricVault';
+import { useBiometricVault, unlockWithBiometricDetailed } from '@/hooks/useBiometricVault';
 
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_SECONDS = 30;
@@ -116,14 +116,21 @@ export default function VaultUnlockScreen() {
     setError('');
     setBiometricLoading(true);
     try {
-      const pwd = await unlockWithBiometric();
-      if (!pwd) {
+      const result = await unlockWithBiometricDetailed();
+      if (result.status !== 'success') {
         if (!automatic) {
-          setError('Não foi possível usar digital. Use a senha ou tente novamente.');
+          if (result.status === 'password_missing') {
+            await bio.disable();
+            setError('Digital reconhecida, mas a senha salva não foi encontrada. Desbloqueie com a senha e ative a digital novamente.');
+          } else if (result.status === 'storage_error') {
+            setError('Digital reconhecida, mas não consegui ler a senha salva. Use a senha e tente ativar a digital novamente.');
+          } else {
+            setError('Não foi possível usar digital. Use a senha ou tente novamente.');
+          }
         }
         return;
       }
-      const ok = await unlockVault(pwd);
+      const ok = await unlockVault(result.password);
       if (ok) {
         router.replace('/(app)/dashboard');
       } else {

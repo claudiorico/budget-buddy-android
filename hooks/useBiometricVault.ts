@@ -7,12 +7,27 @@ import { storage } from '@/lib/storage';
 const SS_KEY = 'vault_password_biometric';
 const MMKV_FLAG = 'biometric_unlock_enabled';
 const BIOMETRIC_TIMEOUT_MS = 25000;
+const ANDROID_AUTH_SETTLE_MS = 250;
 
 export type BiometricSupport = {
   hasHardware: boolean;
   isEnrolled: boolean;
   primaryType: 'fingerprint' | 'face' | 'iris' | 'none';
 };
+
+type BiometricAuthResult =
+  | { success: true }
+  | { success: false; error: string };
+
+export type BiometricUnlockResult =
+  | { status: 'success'; password: string }
+  | { status: 'auth_failed'; error: string }
+  | { status: 'password_missing' }
+  | { status: 'storage_error' };
+
+const sleep = (ms: number) => new Promise((resolve) => {
+  setTimeout(resolve, ms);
+});
 
 export async function checkBiometricSupport(): Promise<BiometricSupport> {
   const hasHardware = await LocalAuth.hasHardwareAsync();
@@ -29,10 +44,15 @@ export async function checkBiometricSupport(): Promise<BiometricSupport> {
   return { hasHardware, isEnrolled, primaryType };
 }
 
-async function authenticateUser(reason: string): Promise<boolean> {
+async function authenticateUser(reason: string): Promise<BiometricAuthResult> {
   let timeout: ReturnType<typeof setTimeout> | null = null;
 
   try {
+    if (Platform.OS === 'android') {
+      await LocalAuth.cancelAuthenticate().catch(() => {});
+      await sleep(ANDROID_AUTH_SETTLE_MS);
+    }
+
     const auth = LocalAuth.authenticateAsync({
       promptMessage: reason,
       cancelLabel: 'Cancelar',
@@ -40,35 +60,45 @@ async function authenticateUser(reason: string): Promise<boolean> {
       disableDeviceFallback: false,
     });
 
-    const timeoutPromise = new Promise<false>((resolve) => {
+    const timeoutPromise = new Promise<{ success: false; error: 'timeout' }>((resolve) => {
       timeout = setTimeout(() => {
         if (Platform.OS === 'android') {
           LocalAuth.cancelAuthenticate().catch(() => {});
         }
-        resolve(false);
+        resolve({ success: false, error: 'timeout' });
       }, BIOMETRIC_TIMEOUT_MS);
     });
 
     const res = await Promise.race([auth, timeoutPromise]);
-    return typeof res === 'boolean' ? res : res.success;
-  } catch {
-    return false;
+    if (res.success) return { success: true };
+    return { success: false, error: res.error ?? 'unknown' };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'unknown' };
   } finally {
     if (timeout) clearTimeout(timeout);
   }
 }
 
-export async function unlockWithBiometric(): Promise<string | null> {
-  const ok = await authenticateUser('Desbloquear cofre');
-  if (!ok) return null;
+export async function unlockWithBiometricDetailed(): Promise<BiometricUnlockResult> {
+  const auth = await authenticateUser('Desbloquear cofre');
+  if (!auth.success) {
+    return { status: 'auth_failed', error: auth.error };
+  }
 
   try {
-    return await SecureStore.getItemAsync(SS_KEY, {
+    const password = await SecureStore.getItemAsync(SS_KEY, {
       keychainService: 'budget-buddy-vault',
     });
+    if (!password) return { status: 'password_missing' };
+    return { status: 'success', password };
   } catch {
-    return null;
+    return { status: 'storage_error' };
   }
+}
+
+export async function unlockWithBiometric(): Promise<string | null> {
+  const result = await unlockWithBiometricDetailed();
+  return result.status === 'success' ? result.password : null;
 }
 
 export async function cancelBiometricAuthentication(): Promise<void> {
@@ -103,7 +133,7 @@ export function useBiometricVault() {
     if (!currentSupport.hasHardware || !currentSupport.isEnrolled) return false;
 
     const ok = await authenticateUser('Confirmar para ativar desbloqueio por digital');
-    if (!ok) return false;
+    if (!ok.success) return false;
 
     try {
       try {
