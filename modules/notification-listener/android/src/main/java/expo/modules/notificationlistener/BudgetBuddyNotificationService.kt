@@ -5,6 +5,7 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
@@ -190,10 +191,14 @@ class BudgetBuddyNotificationService : NotificationListenerService() {
     private fun postCaptureNotification(text: String) {
         ensureChannel()
 
-        // Open the app's main activity when tapped.
-        val launchIntent = packageManager.getLaunchIntentForPackage(packageName)?.apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
-        } ?: return
+        // Open the expenses tab/import area when tapped.
+        val launchIntent = Intent(
+            Intent.ACTION_VIEW,
+            Uri.parse("budgetbuddyandroid://expenses?importCaptures=1")
+        ).apply {
+            setPackage(packageName)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }
 
         val pi = PendingIntent.getActivity(
             this, 0, launchIntent,

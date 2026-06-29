@@ -8,13 +8,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useData } from '@/contexts/DataContext';
 import type { Expense, Category } from '@/contexts/DataContext';
-import { useAuth } from '@/contexts/AuthContext';
 import { ExpenseInputSheet } from '@/components/ExpenseInputSheet';
 import { ExpensePreviewSheet, type PreviewInitial } from '@/components/ExpensePreviewSheet';
 import type { ExpenseDraft } from '@/lib/ai';
 import * as NotificationListener from '@/modules/notification-listener/src';
-
-const NOTIFICATION_MONITOR_EMAIL = 'claudiorico81@gmail.com';
 
 // ── Formatters ────────────────────────────────────────────────────────────────
 
@@ -48,8 +45,7 @@ type ListItem =
 export default function ExpensesScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { user } = useAuth();
-  const params = useLocalSearchParams<{ shareText?: string }>();
+  const params = useLocalSearchParams<{ shareText?: string; importCaptures?: string }>();
   const {
     expenses, categories, loading, selectedYear,
     addExpense, updateExpenseCat, deleteExpense,
@@ -114,8 +110,6 @@ export default function ExpensesScreen() {
   const [pendingCaptures, setPendingCaptures] = useState<string[]>([]);
   const [capturePermissionGranted, setCapturePermissionGranted] = useState(false);
   const [captureBeingImported, setCaptureBeingImported] = useState<string | null>(null);
-  const canUseNotificationMonitor =
-    user?.email?.trim().toLowerCase() === NOTIFICATION_MONITOR_EMAIL;
 
   // ── Handle incoming share intent ───────────────────────────────────────────
   useEffect(() => {
@@ -129,14 +123,9 @@ export default function ExpensesScreen() {
   }, [params.shareText]);
 
   const refreshPendingCaptures = useCallback(() => {
-    if (!canUseNotificationMonitor) {
-      setPendingCaptures([]);
-      setCapturePermissionGranted(false);
-      return;
-    }
     setPendingCaptures(NotificationListener.getPendingNotifications());
     setCapturePermissionGranted(NotificationListener.isPermissionGranted());
-  }, [canUseNotificationMonitor]);
+  }, []);
 
   useEffect(() => {
     refreshPendingCaptures();
@@ -145,6 +134,14 @@ export default function ExpensesScreen() {
     });
     return () => sub.remove();
   }, [refreshPendingCaptures]);
+
+  useEffect(() => {
+    if (params.importCaptures) {
+      refreshPendingCaptures();
+      router.setParams({ importCaptures: undefined });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.importCaptures, refreshPendingCaptures]);
 
   const openInput = useCallback(() => {
     setInputInitialText(undefined);
@@ -336,7 +333,7 @@ export default function ExpensesScreen() {
         </ScrollView>
       )}
 
-      {canUseNotificationMonitor && pendingCaptures.length > 0 && (
+      {pendingCaptures.length > 0 && (
         <View className="mx-4 mb-3 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 p-4">
           <View className="flex-row items-center justify-between gap-3 mb-3">
             <View className="flex-1">
@@ -382,7 +379,7 @@ export default function ExpensesScreen() {
         </View>
       )}
 
-      {canUseNotificationMonitor && pendingCaptures.length === 0 && capturePermissionGranted && (
+      {pendingCaptures.length === 0 && capturePermissionGranted && (
         <View className="mx-4 mb-3 rounded-2xl bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900 p-3">
           <Text className="text-xs font-semibold text-blue-800 dark:text-blue-200">
             Captura de notificações ativa
