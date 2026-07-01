@@ -2,7 +2,7 @@
   "expo": {
     "name": "Gestão Financeira",
     "slug": "budget-buddy-android",
-    "version": "1.0.8",
+    "version": "1.0.9",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "budgetbuddyandroid",
@@ -12,7 +12,7 @@
     },
     "android": {
       "package": "br.com.claudiorico.gestaofinanceira",
-      "versionCode": 17,
+      "versionCode": 18,
       "adaptiveIcon": {
         "backgroundColor": "#3B0764",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
