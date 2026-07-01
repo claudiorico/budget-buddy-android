@@ -58,6 +58,7 @@ async function authenticateUser(reason: string): Promise<BiometricAuthResult> {
       cancelLabel: 'Cancelar',
       fallbackLabel: 'Usar senha do aparelho',
       disableDeviceFallback: false,
+      requireConfirmation: false,
     });
 
     const timeoutPromise = new Promise<{ success: false; error: 'timeout' }>((resolve) => {
