@@ -639,6 +639,11 @@ export default function ProfileScreen() {
                     <Text className="text-[11px] text-gray-400 dark:text-gray-600" numberOfLines={2}>
                       {event.text || 'Sem texto visível'}
                     </Text>
+                    {(event.notificationKey || event.notificationId || event.postTime) ? (
+                      <Text className="text-[10px] text-gray-400 dark:text-gray-700 mt-0.5" numberOfLines={1}>
+                        id {event.notificationId ?? '-'} Â· tag {event.tag || '-'} Â· post {event.postTime ?? '-'} Â· key {(event.notificationKey ?? '').slice(0, 36)}
+                      </Text>
+                    ) : null}
                   </View>
                 ))}
               </View>

@@ -8,6 +8,10 @@ export type NotificationDiagnosticEvent = {
   captured: boolean;
   reason: string;
   timestamp: number;
+  notificationKey?: string;
+  notificationId?: number;
+  tag?: string;
+  postTime?: number;
 };
 
 export type NotificationDiagnostics = {

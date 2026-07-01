@@ -43,6 +43,7 @@ export default function VaultUnlockScreen() {
   const lastAutoBiometricAtRef = useRef(0);
   const autoBiometricTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const unlockCompletedRef = useRef(false);
+  const biometricInFlightRef = useRef(false);
 
   const loading = passwordLoading || biometricLoading || resetLoading;
 
@@ -114,7 +115,13 @@ export default function VaultUnlockScreen() {
 
   const handleBiometricUnlock = async ({ automatic = false } = {}) => {
     if (unlockCompletedRef.current) return;
+    if (biometricInFlightRef.current) return;
     if (passwordLoading || biometricLoading || resetLoading || isBlocked) return;
+    biometricInFlightRef.current = true;
+    if (autoBiometricTimerRef.current) {
+      clearTimeout(autoBiometricTimerRef.current);
+      autoBiometricTimerRef.current = null;
+    }
     setError('');
     setBiometricLoading(true);
     try {
@@ -145,6 +152,7 @@ export default function VaultUnlockScreen() {
         setError('Senha biométrica desatualizada. Use sua senha do cofre.');
       }
     } finally {
+      biometricInFlightRef.current = false;
       setBiometricLoading(false);
     }
   };
@@ -153,6 +161,7 @@ export default function VaultUnlockScreen() {
     if (
       !bio.enabled ||
       unlockCompletedRef.current ||
+      biometricInFlightRef.current ||
       mode !== 'unlock' ||
       isBlocked ||
       appState !== 'active' ||

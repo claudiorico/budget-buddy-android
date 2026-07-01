@@ -19,8 +19,10 @@ class BudgetBuddyNotificationService : NotificationListenerService() {
         private const val PREFS_NAME = "budget_buddy_notif"
         private const val KEY_PENDING_QUEUE = "pending_queue"
         private const val KEY_RECENT_EVENTS = "recent_events"
+        private const val KEY_RECENT_NOTIFICATION_KEYS = "recent_notification_keys"
         private const val MAX_QUEUE_SIZE = 30
         private const val MAX_RECENT_EVENTS = 20
+        private const val MAX_RECENT_NOTIFICATION_KEYS = 80
         private const val CHANNEL_ID = "budget_buddy_imports"
         private const val NOTIF_ID = 9901
 
@@ -71,10 +73,26 @@ class BudgetBuddyNotificationService : NotificationListenerService() {
 
         fun addPendingText(context: Context, text: String): Boolean {
             val existing = getPendingQueue(context)
-            if (existing.any { it == text }) return false
             val queue = (existing + text).takeLast(MAX_QUEUE_SIZE)
             saveQueue(context, queue)
             return true
+        }
+
+        private fun getRecentNotificationKeys(context: Context): List<String> {
+            val raw = prefs(context).getString(KEY_RECENT_NOTIFICATION_KEYS, null) ?: return emptyList()
+            val arr = JSONArray(raw)
+            return (0 until arr.length()).map { arr.getString(it) }
+        }
+
+        private fun hasRecentNotificationKey(context: Context, key: String): Boolean =
+            getRecentNotificationKeys(context).contains(key)
+
+        private fun rememberNotificationKey(context: Context, key: String) {
+            val keys = (listOf(key) + getRecentNotificationKeys(context).filterNot { it == key })
+                .take(MAX_RECENT_NOTIFICATION_KEYS)
+            val arr = JSONArray()
+            keys.forEach { arr.put(it) }
+            prefs(context).edit().putString(KEY_RECENT_NOTIFICATION_KEYS, arr.toString()).apply()
         }
 
         fun removePendingText(context: Context, text: String) {
@@ -104,6 +122,10 @@ class BudgetBuddyNotificationService : NotificationListenerService() {
                     "captured" to item.optBoolean("captured"),
                     "reason" to item.optString("reason"),
                     "timestamp" to item.optLong("timestamp"),
+                    "notificationKey" to item.optString("notificationKey"),
+                    "notificationId" to item.optInt("notificationId"),
+                    "tag" to item.optString("tag"),
+                    "postTime" to item.optLong("postTime"),
                 )
             }
         }
@@ -114,6 +136,10 @@ class BudgetBuddyNotificationService : NotificationListenerService() {
             text: String,
             captured: Boolean,
             reason: String,
+            notificationKey: String = "",
+            notificationId: Int = 0,
+            tag: String = "",
+            postTime: Long = 0L,
         ) {
             val arr = JSONArray()
             val event = JSONObject()
@@ -122,6 +148,10 @@ class BudgetBuddyNotificationService : NotificationListenerService() {
                 .put("captured", captured)
                 .put("reason", reason)
                 .put("timestamp", System.currentTimeMillis())
+                .put("notificationKey", notificationKey)
+                .put("notificationId", notificationId)
+                .put("tag", tag)
+                .put("postTime", postTime)
 
             arr.put(event)
             getRecentEvents(context).take(MAX_RECENT_EVENTS - 1).forEach { previous ->
@@ -142,6 +172,14 @@ class BudgetBuddyNotificationService : NotificationListenerService() {
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         sbn ?: return
+        val notificationKey = listOf(
+            sbn.key,
+            sbn.packageName,
+            sbn.id.toString(),
+            sbn.tag ?: "",
+            sbn.postTime.toString(),
+        ).joinToString("|")
+        val eventTag = sbn.tag ?: ""
 
         val extras = sbn.notification?.extras ?: return
         val full = listOf(
@@ -156,35 +194,42 @@ class BudgetBuddyNotificationService : NotificationListenerService() {
             .joinToString(" ")
             .replace(Regex("\\s+"), " ")
             .trim()
+        val captureKey = "$notificationKey|${full.hashCode()}"
 
         if (sbn.packageName == packageName) {
-            addRecentEvent(this, sbn.packageName, full, false, "notificação do próprio app")
+            addRecentEvent(this, sbn.packageName, full, false, "notificação do próprio app", captureKey, sbn.id, eventTag, sbn.postTime)
             return
         }
 
         if (full.isBlank()) {
-            addRecentEvent(this, sbn.packageName, "", false, "texto vazio")
+            addRecentEvent(this, sbn.packageName, "", false, "texto vazio", captureKey, sbn.id, eventTag, sbn.postTime)
             return
         }
 
         val monitoredPackage = sbn.packageName in BANK_PACKAGES || isLikelyFinancialPackage(sbn.packageName)
         if (!monitoredPackage) {
-            addRecentEvent(this, sbn.packageName, full, false, "pacote não monitorado")
+            addRecentEvent(this, sbn.packageName, full, false, "pacote não monitorado", captureKey, sbn.id, eventTag, sbn.postTime)
             return
         }
 
         if (BANK_PATTERNS.none { it.containsMatchIn(full) }) {
-            addRecentEvent(this, sbn.packageName, full, false, "texto sem valor/pix")
+            addRecentEvent(this, sbn.packageName, full, false, "texto sem valor/pix", captureKey, sbn.id, eventTag, sbn.postTime)
             return
         }
 
+        if (hasRecentNotificationKey(this, captureKey)) {
+            addRecentEvent(this, sbn.packageName, full, false, "notifica\u00E7\u00E3o Android repetida", captureKey, sbn.id, eventTag, sbn.postTime)
+            return
+        }
+
+        rememberNotificationKey(this, captureKey)
         val added = addPendingText(this, full)
         if (!added) {
-            addRecentEvent(this, sbn.packageName, full, false, "já capturado")
+            addRecentEvent(this, sbn.packageName, full, false, "fila cheia ou não salvo", captureKey, sbn.id, eventTag, sbn.postTime)
             return
         }
 
-        addRecentEvent(this, sbn.packageName, full, true, "capturado")
+        addRecentEvent(this, sbn.packageName, full, true, "capturado", captureKey, sbn.id, eventTag, sbn.postTime)
         postCaptureNotification(full)
     }
 
