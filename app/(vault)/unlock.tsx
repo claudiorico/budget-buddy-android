@@ -44,6 +44,7 @@ export default function VaultUnlockScreen() {
   const autoBiometricTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const unlockCompletedRef = useRef(false);
   const biometricInFlightRef = useRef(false);
+  const autoBiometricAttemptedRef = useRef(false);
 
   const loading = passwordLoading || biometricLoading || resetLoading;
 
@@ -162,6 +163,7 @@ export default function VaultUnlockScreen() {
       !bio.enabled ||
       unlockCompletedRef.current ||
       biometricInFlightRef.current ||
+      autoBiometricAttemptedRef.current ||
       mode !== 'unlock' ||
       isBlocked ||
       appState !== 'active' ||
@@ -180,6 +182,8 @@ export default function VaultUnlockScreen() {
     }
 
     autoBiometricTimerRef.current = setTimeout(() => {
+      if (autoBiometricAttemptedRef.current) return;
+      autoBiometricAttemptedRef.current = true;
       lastAutoBiometricAtRef.current = Date.now();
       handleBiometricUnlock({ automatic: true });
     }, Platform.OS === 'android' ? 700 : 250);
